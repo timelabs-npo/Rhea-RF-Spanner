@@ -13,6 +13,14 @@ is explicitly a conditional model derived from phase, not absolute distance.
 
 ## Build and validation status
 
+**Public CI passed on 7 November 2026:** the release signal core compiled,
+all 18 XCTest tests passed, and the iOS Simulator Debug and unsigned iOS
+device Release applications both built successfully with Xcode 26.3.
+See [the public GitHub Actions run](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42380978695),
+which tested source commit `05bc66497630ecc88382d8352002c1a3f0733896`.
+Physical-iPhone execution, signing, and TestFlight delivery remain separate
+release steps.
+
 See [docs/BUILD_STATUS.md](docs/BUILD_STATUS.md) for commands, exit codes, source
 fingerprints, and the distinction between portable-core, iOS, signing, and
 physical-device results. Compiler logs are retained under `docs/validation/`.

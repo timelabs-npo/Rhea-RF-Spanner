@@ -1,0 +1,62 @@
+{
+  "repository": "timelabs-npo/Rhea-RF-Spanner",
+  "visibility": "public",
+  "tested_source_commit": "05bc66497630ecc88382d8352002c1a3f0733896",
+  "source_tree": "974c49d8b1b9f523aeeb449c14ac3d81f77bea9f",
+  "workflow_run": {
+    "id": 42380978695,
+    "url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42380978695",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-07T14:18:29Z",
+    "updated_at": "2026-11-07T14:21:00Z"
+  },
+  "job": {
+    "id": 128428332297,
+    "name": "Swift core and unsigned iOS app",
+    "conclusion": "success"
+  },
+  "toolchain": {
+    "xcode": "26.3",
+    "xcode_build": "17C529",
+    "swift": "6.2.4",
+    "swift_build": "swiftlang-6.2.4.1.4",
+    "clang": "1700.6.4.2",
+    "simulator_sdk": "iPhoneSimulator26.2.sdk",
+    "device_sdk": "iPhoneOS26.2.sdk",
+    "deployment_target": "iOS 18.0"
+  },
+  "checks": {
+    "core_release_build": "success",
+    "xctest_tests": 18,
+    "xctest_failures": 0,
+    "simulator_debug_build": "BUILD SUCCEEDED",
+    "device_release_build": "BUILD SUCCEEDED",
+    "code_signing_allowed": false
+  },
+  "other_workflow_results": [
+    {
+      "id": 42380986143,
+      "name": "Code Quality: CodeQL Setup",
+      "conclusion": "success"
+    },
+    {
+      "id": 42380982066,
+      "name": "CodeQL Setup",
+      "conclusion": "success"
+    }
+  ],
+  "publication_checks": {
+    "unauthenticated_http_status": 200,
+    "private": false,
+    "source_files": 51,
+    "local_tree_equals_published_tree": true,
+    "private_operations_repository": "timelabs-npo/ai-traces",
+    "private_operations_visibility": "private"
+  },
+  "limitations": [
+    "No physical-iPhone execution or acoustic validation performed.",
+    "No signed archive, TestFlight upload, or Apple review performed.",
+    "The later documentation commit records this run; it does not claim a new compiler execution."
+  ]
+}

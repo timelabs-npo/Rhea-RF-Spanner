@@ -3,7 +3,43 @@
 Date of work: **2026-11-07**. This file distinguishes executed checks from work
 that still requires a usable build host or developer account.
 
-## Portable signal core: executed successfully
+## Public repository: compiled successfully on macOS
+
+The workflow in the public
+[timelabs-npo/Rhea-RF-Spanner repository](https://github.com/timelabs-npo/Rhea-RF-Spanner)
+completed with **success**:
+
+- [GitHub Actions run 42380978695](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42380978695).
+- Tested public source commit:
+  [`05bc66497630ecc88382d8352002c1a3f0733896`](https://github.com/timelabs-npo/Rhea-RF-Spanner/commit/05bc66497630ecc88382d8352002c1a3f0733896).
+- Job: `128428332297`, **Swift core and unsigned iOS app**.
+- Xcode **26.3**, build **17C529**.
+- Apple Swift **6.2.4**, `swiftlang-6.2.4.1.4`, clang `1700.6.4.2`.
+- SDKs: **iPhoneSimulator26.2.sdk** and **iPhoneOS26.2.sdk**.
+  Deployment target: **iOS 18.0**.
+- Run started **2026-11-07 14:18:29 UTC / 17:18:29 Europe/Moscow**; final run
+  update **14:21:00 UTC / 17:21:00 Europe/Moscow**.
+
+| Public CI check | Actual result |
+| --- | --- |
+| `swift build -c release` | Success |
+| `swift test` | 18 XCTest tests, 0 failures |
+| iOS Simulator application, Debug, signing disabled | `BUILD SUCCEEDED` |
+| iOS device application, Release, signing disabled | `BUILD SUCCEEDED` |
+
+The complete public job log is
+[`validation/public/job.log`](validation/public/job.log), with machine-readable
+metadata in [`validation/public/run-summary.json`](validation/public/run-summary.json).
+These results identify the tested source commit above. A later documentation-only
+update records this evidence without claiming an additional compiler execution.
+
+## Release checks still outstanding
+
+No app execution on a physical iPhone, acoustic validation, signed archive,
+TestFlight upload, or Apple review is claimed. An unsigned device build is not
+an installable TestFlight delivery. These are separate remaining release steps.
+
+## Historical portable-core validation on Linux
 
 Host: Debian GNU/Linux 13, x86_64. Compiler: official Swift 6.0.3
 (`swift-6.0.3-RELEASE`, target `x86_64-unknown-linux-gnu`). The downloaded release
@@ -23,14 +59,14 @@ silence, weak/poor-fit input, and nonfinite samples. They use synthetic inputs.
 The separate Swift Testing discovery footer reports zero Swift Testing tests;
 the 18 executed tests are XCTest tests.
 
-## iOS application: compiled successfully on macOS
+## Historical bootstrap validation on macOS
 
 The Swift syntax parser accepted the app sources in the Linux environment.
 Parsing does not resolve Apple frameworks and is not an iOS build result.
 
-The macOS CI run in the private bootstrap repository completed with
-**success**. Its compiler logs are retained in this source tree. This is
-historical build evidence; publication does not record an additional build:
+The initial successful macOS CI run took place in the private bootstrap
+repository before public publication. Its compiler logs remain in this
+source tree as historical build evidence:
 
 - Tested source commit: `2b52f3bc10f2c9408a4bbb2e029ee8dc5efa5471`.
 - [GitHub Actions run 42378444311](https://github.com/timelabs-npo/ai-traces/actions/runs/42378444311).
@@ -65,15 +101,9 @@ machine-readable metadata in
 tested the earlier commit `05b0c7c88c42f77bed189f810a3ae37831b18e68`. Its core
 build and 18 tests passed, but the app failed Metal compilation: the fragment
 parameter was named `vertex`, a reserved Metal qualifier. The parameter was
-renamed to `stageInput`; the successful run above tests that correction. The
-earlier log remains in
+renamed to `stageInput`; the successful bootstrap run above tests that
+correction. The earlier log remains in
 [`validation/macos/attempt-1-job.log`](validation/macos/attempt-1-job.log).
-
-### Validation not performed
-
-No app execution on a physical iPhone, acoustic validation, signed archive,
-TestFlight upload, or Apple review is claimed. An unsigned device build is not
-an installable TestFlight delivery. These are separate remaining release steps.
 
 ## Host and access observations
 
@@ -95,9 +125,8 @@ repository has independent source history and contains no operational key
 material or private-repository history. The same boundary applies to the
 standalone application archive.
 
-A workflow for the public repository is included in
-`.github/workflows/rhea-rf-spanner-ci.yml`. At the time of this publication
-update, no completed public-repository CI result has been recorded here.
+The public workflow, `.github/workflows/rhea-rf-spanner-ci.yml`, produced
+the successful public-repository run recorded at the top of this document.
 
 ## Reproduce and associate results
 
@@ -107,10 +136,12 @@ or the recorded commit before carrying a build result forward to a later change.
 The general release procedure and device checks are in `AppleSubmission.md`
 and `ReviewTestPlan.md`.
 
-Before packaging, 31 unchanged build inputs were compared byte-for-byte with
-the uploaded source snapshot, and the corrected Metal file was compared with
-its content retrieved directly from the successfully tested commit. No
-unexpected build-input differences were found. Documentation and retained logs
-were then added in a separate documentation commit; this does not claim a new
-compiler execution for that later commit. See
-`validation/build-input-match.json` and `validation/source-sha256.json`.
+For the original bootstrap archive, 31 unchanged build inputs were compared
+byte-for-byte with the uploaded source snapshot, and the corrected Metal file
+was compared with its content retrieved directly from the successfully tested
+bootstrap commit. No unexpected build-input differences were found in that
+comparison. Documentation and retained logs were then added in a separate
+documentation commit; this does not claim a new compiler execution for that
+later commit. See `validation/build-input-match.json` and
+`validation/source-sha256.json`. For the public build, use the public source
+commit and run evidence recorded above.
