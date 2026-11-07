@@ -6,7 +6,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 paths = [root / "Package.swift"]
-for directory in ("App", "Sources", "Tests", "Config", "RheaRFSpanner.xcodeproj", "scripts", ".github/workflows"):
+for directory in ("App", "AppTests", "Sources", "Tests", "Config", "RheaRFSpanner.xcodeproj", "scripts", ".github/workflows"):
     paths += [p for p in (root / directory).rglob("*") if p.is_file()]
 entries = {}
 for path in sorted(paths):

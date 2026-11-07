@@ -1,0 +1,4 @@
+2026-11-07T21:38:59.0572540Z Image: macos-15-arm64
+2026-11-07T21:38:59.9320480Z   ref: a93da56e45726d84e27f567c323eeda45b17d7d4
+2026-11-07T21:39:01.7479150Z HEAD is now at a93da56 Prepare guarded TestFlight signing and preserve Waterfall data gaps
+2026-11-07T21:39:01.7791270Z a93da56e45726d84e27f567c323eeda45b17d7d4

@@ -7,36 +7,57 @@ struct PrivacyMethodView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    section("Privacy", """
-                    Rhea RF Spanner analyzes microphone samples on this device during an experiment you start. The microphone can also receive surrounding sounds, including speech. The app uses these samples for acoustic phase analysis; it does not transcribe speech, identify people, save audio files, or upload audio or measurement results.
+                VStack(alignment: .leading, spacing: 24) {
+                    section("Three explicit sources", """
+                    LIVE analyzes microphone samples and emits a speaker tone only after you agree, tap Record, and grant iOS microphone permission. Granting permission does not start the tone: tap Record again when ready. LIVE requires a physical device and its built-in microphone and speaker.
 
-                    Samples and current measurements are held in volatile memory. The app includes no account system, advertising, analytics SDK, tracking, or background recording.
+                    DEMO is a silent, deterministic simulation. It generates synthetic samples and passes them through the same signal-processing path as LIVE. It does not request microphone permission, activate an audio session, or emit sound.
+
+                    REPLAY reads previously captured results from memory. Every frame retains its original LIVE or DEMO source. The microphone and speaker are off during replay.
                     """)
-                    section("You control each experiment", """
-                    The microphone and 20 kHz speaker tone operate together only after you agree, tap Start experiment, and grant iOS microphone permission. When permission is first granted, tap Start experiment again to begin. Tap Stop experiment at any time.
+                    section("Privacy and memory", """
+                    LIVE microphone samples can include surrounding sounds, including speech. The app analyzes acoustic phase and a spectrum; it does not transcribe speech, identify people, save audio files, or upload audio or results.
 
-                    Each experiment ends after at most 60 seconds of sampled audio. Leaving the active app, an audio interruption, a route change, or an audio-service reset ends the experiment. Returning to the app does not restart it. You can revoke microphone permission in iOS Settings.
+                    Temporary samples, up to 2,048 result frames, and bounded companion spectra remain in volatile memory. The oldest result is overwritten when the replay is full. The menu’s Clear replay action removes retained results after a capture stops. Closing the app’s process also loses the in-memory replay.
+
+                    There are no accounts, advertising, analytics SDKs, tracking, or background recording. Memory-based result recording is separate from saving a raw audio file.
                     """)
-                    section("Method and limits", """
-                    This is an acoustic phase experiment using the built-in speaker and microphone at 48 kHz. The speaker emits a continuous 20 kHz tone. The app does not measure radio-frequency signals.
+                    section("You control each recording", """
+                    Tap Stop at any time. Each recording is limited to 60 seconds of samples and a separate 60-second elapsed-time limit. Changing the carrier frequency does not extend either limit.
 
-                    Relative phase and the phase-derived displacement model are affected by sound paths, device response, timing, and movement. The displayed displacement is not an independently measured distance. A strong tone can be direct speaker-to-microphone coupling; it does not prove that a reflected path or object has been identified.
+                    Leaving the active app stops acquisition and pauses replay. LIVE also stops on audio interruptions, route changes, audio-service changes, or unsupported audio timing or formats. Returning to the app does not restart a capture. You can revoke microphone permission in iOS Settings.
+                    """)
+                    section("Acoustic method", """
+                    The built-in audio route must operate at 48 kHz. Choose a carrier from 18 to 22 kHz in 500 Hz steps. This is an acoustic experiment; the app does not measure radio-frequency signals.
 
-                    The displayed quality is a fitted-tone to residual estimate, not a calibrated acoustic signal-to-noise ratio. Signal loss or a capture gap invalidates the phase reference. The next valid estimate establishes a new zero.
+                    The estimator fits a tone to each 2,048-sample window, approximately 23.4 windows per second. A frequency change ends the old acquisition and constructs a new one with a fresh phase reference. Phase is not continuous across different carriers. Signal loss, invalid timing, or a capture gap invalidates the reference; recovery establishes a new zero.
 
-                    The animated wave is an abstract visualization, not an image of your surroundings. Reduce Motion in iOS accessibility settings disables continuous animation.
+                    Relative phase and the phase-derived displacement model depend on sound paths, device response, timing, and motion. The displacement is conditional on a single reflected-path model and is not an independently measured distance. Strong direct speaker-to-microphone coupling does not identify a reflected object.
+
+                    Tone / residual is a fitted-signal quality estimate, not calibrated acoustic SNR. Any quality score is a heuristic, not a confidence probability. Missing phase, device pose, and LiDAR depth are reported as unavailable.
+                    """)
+                    section("Reading the viewport", """
+                    LIVE Field is an abstract graphic of a single acoustic probe’s phase. DEMO Field is an explicitly synthetic illustration. Neither is an image, a spatial reconstruction, or a thermal measurement of your surroundings.
+
+                    Waterfall shows FFT-derived frequency bins from 18 to 22 kHz. Frequency is horizontal; sample age is vertical, with the newest data at the top. Levels are in digital dBFS. Missing intervals are hatched. Display interpolation does not add measured spectral resolution.
+
+                    Gain, persistence, and false-color palettes affect only the display. They never change the microphone signal, emitted tone, synthetic sample amplitude, simulation noise, or stored measurements. Reduce Motion suppresses moving field contours, and Reduce Transparency gives instrument panels opaque backgrounds.
+                    """)
+                    section("DEMO model", """
+                    The default simulation uses a carrier peak amplitude of 0.1, expected signal-to-noise ratio of 30 dB, and sinusoidal modeled displacement of 1 mm at 0.25 Hz. Seeded sample noise makes runs reproducible. Finite-window estimates can differ from the requested full-band SNR.
+
+                    A synthetic field can demonstrate how the controls behave. It provides no observation of an actual object, device position, depth, or room.
                     """)
                     section("Before emitting sound", """
-                    Use the experiment only where everyone nearby agrees. Keep the speaker away from ears, begin with low device volume, and stop if the sound is uncomfortable. A 20 kHz tone is not guaranteed to be inaudible. Do not use headphones or external audio routes for this experiment.
+                    Use LIVE only where everyone nearby agrees. Keep the speaker away from ears, begin with low device volume, and stop if uncomfortable. A tone in the 18–22 kHz range is not guaranteed to be inaudible. Headphones and external audio routes are unsupported.
 
-                    The generated signal has a fixed peak amplitude of 0.02 in digital full-scale units with a short fade at the scheduled start and end. Stop or an interruption silences it immediately. This is not a calibrated sound-pressure level. Device volume and hardware affect the emitted sound.
+                    LIVE output has a fixed peak amplitude of 0.02 in digital full-scale units, with short fades at the scheduled start and end. Stop or an interruption silences it immediately. This is not a calibrated sound-pressure level; device volume and hardware affect the emitted sound.
                     """)
-                    section("Distribution services", """
-                    Apple separately operates App Store and TestFlight delivery and feedback services. Apple's handling of data is governed by Apple's policies.
-                    """)
+                    section("Distribution services", "Apple separately operates App Store and TestFlight delivery and feedback services. Apple’s handling of that data is governed by Apple’s policies.")
                 }
                 .padding(20)
+                .frame(maxWidth: 700, alignment: .leading)
+                .frame(maxWidth: .infinity)
                 .textSelection(.enabled)
             }
             .navigationTitle("Privacy & method")
@@ -50,7 +71,7 @@ struct PrivacyMethodView: View {
     }
 
     private func section(_ title: String, _ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 9) {
             Text(title).font(.headline)
             Text(text).font(.body).foregroundStyle(.secondary)
         }

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Parameters for a single-tone acoustic experiment, not a radio transmitter.
-/// Only `.standard` is the intended iOS hardware configuration for this release.
+/// iOS hardware uses 48 kHz and the validated 18–22 kHz / 500 Hz carrier grid.
 public struct RadarConfiguration: Sendable, Equatable {
     public static let standard = RadarConfiguration()
 
@@ -60,7 +60,7 @@ public enum PhaseValidity: String, Sendable {
         case .lowSignal: "Insufficient tone amplitude"
         case .lowQuality: "Insufficient tone-to-residual ratio"
         case .inputDiscontinuity: "Capture timeline interrupted"
-        case .nonFiniteInput: "Invalid audio samples"
+        case .nonFiniteInput: "Non-finite or unrepresentable signal values"
         }
     }
 }
@@ -131,8 +131,11 @@ struct CarrierReference: Sendable {
         while b != 0 {
             (a, b) = (b, a % b)
         }
-        let period = configuration.sampleRateHz / a
-        let step = configuration.carrierFrequencyHz / a
+        let usesObservatoryGrid = configuration.sampleRateHz == CarrierGrid.sampleRateHz
+            && CarrierGrid.isSupported(configuration.carrierFrequencyHz)
+        let period = usesObservatoryGrid ? CarrierGrid.phaseModulus : configuration.sampleRateHz / a
+        let step = usesObservatoryGrid ? configuration.carrierFrequencyHz / CarrierGrid.stepHz
+            : configuration.carrierFrequencyHz / a
         var cosine: [Double] = []
         var negativeSine: [Double] = []
         cosine.reserveCapacity(period)

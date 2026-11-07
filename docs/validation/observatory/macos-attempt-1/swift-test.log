@@ -1,0 +1,374 @@
+Building for debugging...
+[0/7] Write sources
+[0/7] /Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/.build/arm64-apple-macosx/debug/RheaRFSpannerPackageTests.derived/runner.swift
+[1/7] Write sources
+[4/7] Write swift-version-1977FEB4D2752686.txt
+[6/14] Compiling RheaRFCore SPSCFloatRingBuffer.swift
+[7/14] Compiling RheaRFCore SignalTypes.swift
+[8/14] Compiling RheaRFCore SineOscillator.swift
+[9/17] Emitting module RheaRFCore
+[10/17] Compiling RheaRFCore ObservatoryTypes.swift
+[11/17] Compiling RheaRFCore PhaseSensingEngine.swift
+[12/17] Compiling RheaRFCore ReplayTape.swift
+[13/17] Compiling RheaRFCore SpatioTemporalSlice.swift
+[14/17] Compiling RheaRFCore SpectrumAnalyzer.swift
+[15/17] Compiling RheaRFCore SyntheticSignalGenerator.swift
+[16/23] Compiling RheaRFCoreTests RingBufferTests.swift
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:39:24: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 37 | 
+ 38 |     func testWireRecordHas64BytesAndIndependentLittleEndianOffsets() throws {
+ 39 |         let original = record(time: 0x0102_0304_0506_0708, epoch: 0xA1B2_C3D4)
+    |                        |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                        `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 40 |         let data = original.encoded()
+ 41 |         XCTAssertEqual(data.count, 64)
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:50:56: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 48 | 
+ 49 |     func testMissingSpatialValuesAndMeasuredOriginRemainDistinct() throws {
+ 50 |         let missing = try SpatioTemporalSlice(encoded: record().encoded())
+    |                                                        |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                                                        `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 51 |         XCTAssertNil(missing.sensorPosition)
+ 52 |         XCTAssertNil(missing.sensorForward)
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:54:23: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 52 |         XCTAssertNil(missing.sensorForward)
+ 53 |         XCTAssertNil(missing.lidarDepthMeters)
+ 54 |         let located = record(position: .zero, direction: SIMD3(0, 0, -1), depth: 2.5)
+    |                       |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                       `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 55 |         XCTAssertEqual(try SpatioTemporalSlice(encoded: located.encoded()), located)
+ 56 |         XCTAssertNotEqual(located.encoded(), missing.encoded())
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:61:28: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 59 |     func testInvalidPhaseIsUnavailableAndNotAZeroMeasurement() throws {
+ 60 |         for validity in [PhaseValidity.lowSignal, .lowQuality, .inputDiscontinuity, .nonFiniteInput] {
+ 61 |             let original = record(phase: nil, validity: validity)
+    |                            |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                            `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 62 |             let decoded = try SpatioTemporalSlice(encoded: original.encoded())
+ 63 |             XCTAssertNil(decoded.unwrappedPhase)
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:70:20: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 68 | 
+ 69 |     func testDecoderRejectsVersionReservedFlagsAndNonfinitePayload() {
+ 70 |         var data = record().encoded()
+    |                    |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                    `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 71 |         data[63] = 2
+ 72 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data)) {
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:75:16: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 73 |             XCTAssertEqual($0 as? SliceDecodingError, .unsupportedVersion(2))
+ 74 |         }
+ 75 |         data = record().encoded()
+    |                |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 76 |         data[61] |= 4
+ 77 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data)) {
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:80:16: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 78 |             XCTAssertEqual($0 as? SliceDecodingError, .reservedFlags)
+ 79 |         }
+ 80 |         data = record().encoded()
+    |                |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 81 |         data.replaceSubrange(12..<16, with: [0, 0, 0xC0, 0x7F]) // Float32 quiet NaN.
+ 82 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:83:16: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 81 |         data.replaceSubrange(12..<16, with: [0, 0, 0xC0, 0x7F]) // Float32 quiet NaN.
+ 82 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
+ 83 |         data = record().encoded()
+    |                |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 84 |         data[61] &= 0xFD // Valid record cannot declare its phase absent.
+ 85 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:93:17: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 91 |         for time in 0..<5 {
+ 92 |             tape.append(
+ 93 |                 record(time: UInt64(time), source: time % 2 == 0 ? .microphone : .simulated),
+    |                 |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                 `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 94 |                 spectrum: SpectrumFrame(
+ 95 |                     sampleTimestamp: UInt64(time), frequenciesHz: [20_500], magnitudesDBFS: [-20]
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:115:21: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+113 |         XCTAssertNil(tape.spectrum(at: 0))
+114 |         XCTAssertTrue(tape.encodedFrames().isEmpty)
+115 |         tape.append(record(time: 9))
+    |                     |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                     `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+116 |         XCTAssertEqual(tape.slice(at: 0)?.sampleTimestamp, 9)
+117 |     }
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:121:46: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+119 |     func testDefaultTapeKeepsExactly2048WireRecords() {
+120 |         let tape = ReplayTape()
+121 |         for index in 0..<2_051 { tape.append(record(time: UInt64(index))) }
+    |                                              |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                                              `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+122 |         XCTAssertEqual(tape.capacity, 2_048)
+123 |         XCTAssertEqual(tape.count, 2_048)
+[17/23] Compiling RheaRFCoreTests SliceReplayTests.swift
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:39:24: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 37 | 
+ 38 |     func testWireRecordHas64BytesAndIndependentLittleEndianOffsets() throws {
+ 39 |         let original = record(time: 0x0102_0304_0506_0708, epoch: 0xA1B2_C3D4)
+    |                        |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                        `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 40 |         let data = original.encoded()
+ 41 |         XCTAssertEqual(data.count, 64)
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:50:56: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 48 | 
+ 49 |     func testMissingSpatialValuesAndMeasuredOriginRemainDistinct() throws {
+ 50 |         let missing = try SpatioTemporalSlice(encoded: record().encoded())
+    |                                                        |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                                                        `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 51 |         XCTAssertNil(missing.sensorPosition)
+ 52 |         XCTAssertNil(missing.sensorForward)
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:54:23: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 52 |         XCTAssertNil(missing.sensorForward)
+ 53 |         XCTAssertNil(missing.lidarDepthMeters)
+ 54 |         let located = record(position: .zero, direction: SIMD3(0, 0, -1), depth: 2.5)
+    |                       |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                       `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 55 |         XCTAssertEqual(try SpatioTemporalSlice(encoded: located.encoded()), located)
+ 56 |         XCTAssertNotEqual(located.encoded(), missing.encoded())
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:61:28: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 59 |     func testInvalidPhaseIsUnavailableAndNotAZeroMeasurement() throws {
+ 60 |         for validity in [PhaseValidity.lowSignal, .lowQuality, .inputDiscontinuity, .nonFiniteInput] {
+ 61 |             let original = record(phase: nil, validity: validity)
+    |                            |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                            `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 62 |             let decoded = try SpatioTemporalSlice(encoded: original.encoded())
+ 63 |             XCTAssertNil(decoded.unwrappedPhase)
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:70:20: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 68 | 
+ 69 |     func testDecoderRejectsVersionReservedFlagsAndNonfinitePayload() {
+ 70 |         var data = record().encoded()
+    |                    |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                    `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 71 |         data[63] = 2
+ 72 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data)) {
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:75:16: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 73 |             XCTAssertEqual($0 as? SliceDecodingError, .unsupportedVersion(2))
+ 74 |         }
+ 75 |         data = record().encoded()
+    |                |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 76 |         data[61] |= 4
+ 77 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data)) {
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:80:16: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 78 |             XCTAssertEqual($0 as? SliceDecodingError, .reservedFlags)
+ 79 |         }
+ 80 |         data = record().encoded()
+    |                |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 81 |         data.replaceSubrange(12..<16, with: [0, 0, 0xC0, 0x7F]) // Float32 quiet NaN.
+ 82 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:83:16: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 81 |         data.replaceSubrange(12..<16, with: [0, 0, 0xC0, 0x7F]) // Float32 quiet NaN.
+ 82 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
+ 83 |         data = record().encoded()
+    |                |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 84 |         data[61] &= 0xFD // Valid record cannot declare its phase absent.
+ 85 |         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:93:17: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+ 91 |         for time in 0..<5 {
+ 92 |             tape.append(
+ 93 |                 record(time: UInt64(time), source: time % 2 == 0 ? .microphone : .simulated),
+    |                 |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                 `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+ 94 |                 spectrum: SpectrumFrame(
+ 95 |                     sampleTimestamp: UInt64(time), frequenciesHz: [20_500], magnitudesDBFS: [-20]
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:115:21: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+113 |         XCTAssertNil(tape.spectrum(at: 0))
+114 |         XCTAssertTrue(tape.encodedFrames().isEmpty)
+115 |         tape.append(record(time: 9))
+    |                     |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                     `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+116 |         XCTAssertEqual(tape.slice(at: 0)?.sampleTimestamp, 9)
+117 |     }
+
+/Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/Tests/RheaRFCoreTests/SliceReplayTests.swift:121:46: error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+  3 | @testable import RheaRFCore
+  4 | 
+  5 | private func record(
+    |              `- note: 'record(time:source:phase:validity:epoch:position:direction:depth:)' declared here
+  6 |     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
+  7 |     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
+    :
+119 |     func testDefaultTapeKeepsExactly2048WireRecords() {
+120 |         let tape = ReplayTape()
+121 |         for index in 0..<2_051 { tape.append(record(time: UInt64(index))) }
+    |                                              |- error: use of 'record' refers to instance method rather than global function 'record(time:source:phase:validity:epoch:position:direction:depth:)' in module 'RheaRFCoreTests'
+    |                                              `- note: use 'RheaRFCoreTests.' to reference the global function in module 'RheaRFCoreTests'
+122 |         XCTAssertEqual(tape.capacity, 2_048)
+123 |         XCTAssertEqual(tape.count, 2_048)
+[18/25] Emitting module RheaRFCoreTests
+[19/25] Compiling RheaRFCoreTests CarrierGridTests.swift
+[20/25] Compiling RheaRFCoreTests OscillatorTests.swift
+[21/25] Compiling RheaRFCoreTests PhaseSensingTests.swift
+[22/25] Compiling RheaRFCoreTests SpectrumTests.swift
+[23/25] Compiling RheaRFCoreTests SyntheticSignalTests.swift
+error: fatalError

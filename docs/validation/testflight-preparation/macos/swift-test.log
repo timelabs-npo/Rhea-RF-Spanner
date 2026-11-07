@@ -1,0 +1,140 @@
+Building for debugging...
+[0/7] /Users/runner/work/Rhea-RF-Spanner/Rhea-RF-Spanner/.build/arm64-apple-macosx/debug/RheaRFSpannerPackageTests.derived/runner.swift
+[0/7] Write sources
+[4/7] Write swift-version-1977FEB4D2752686.txt
+[6/14] Compiling RheaRFCore SPSCFloatRingBuffer.swift
+[7/14] Compiling RheaRFCore SignalTypes.swift
+[8/14] Compiling RheaRFCore SineOscillator.swift
+[9/17] Emitting module RheaRFCore
+[10/17] Compiling RheaRFCore ObservatoryTypes.swift
+[11/17] Compiling RheaRFCore PhaseSensingEngine.swift
+[12/17] Compiling RheaRFCore ReplayTape.swift
+[13/17] Compiling RheaRFCore SpatioTemporalSlice.swift
+[14/17] Compiling RheaRFCore SpectrumAnalyzer.swift
+[15/17] Compiling RheaRFCore SyntheticSignalGenerator.swift
+[16/23] Emitting module RheaRFCoreTests
+[17/23] Compiling RheaRFCoreTests RingBufferTests.swift
+[18/23] Compiling RheaRFCoreTests SliceReplayTests.swift
+[19/23] Compiling RheaRFCoreTests CarrierGridTests.swift
+[20/23] Compiling RheaRFCoreTests OscillatorTests.swift
+[21/23] Compiling RheaRFCoreTests PhaseSensingTests.swift
+[22/25] Compiling RheaRFCoreTests SpectrumTests.swift
+[23/25] Compiling RheaRFCoreTests SyntheticSignalTests.swift
+[24/27] Compiling RheaRFSpannerPackageTests runner.swift
+[25/27] Emitting module RheaRFSpannerPackageTests
+[25/27] Write Objects.LinkFileList
+[26/27] Linking RheaRFSpannerPackageTests
+Build complete! (21.38s)
+Test Suite 'All tests' started at 2026-11-07 21:39:44.671.
+Test Suite 'RheaRFSpannerPackageTests.xctest' started at 2026-11-07 21:39:44.673.
+Test Suite 'CarrierGridTests' started at 2026-11-07 21:39:44.673.
+Test Case '-[RheaRFCoreTests.CarrierGridTests testAllGridCarriersRetainPhaseAndAmplitudeAtLargeCaptureTimestamps]' started.
+Test Case '-[RheaRFCoreTests.CarrierGridTests testAllGridCarriersRetainPhaseAndAmplitudeAtLargeCaptureTimestamps]' passed (0.229 seconds).
+Test Case '-[RheaRFCoreTests.CarrierGridTests testEveryGridCarrierUsesTheSameBoundedModulo96AddressSpace]' started.
+Test Case '-[RheaRFCoreTests.CarrierGridTests testEveryGridCarrierUsesTheSameBoundedModulo96AddressSpace]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.CarrierGridTests testKnownOrthogonalToneAndResidualEnergyRatio]' started.
+Test Case '-[RheaRFCoreTests.CarrierGridTests testKnownOrthogonalToneAndResidualEnergyRatio]' passed (0.009 seconds).
+Test Suite 'CarrierGridTests' passed at 2026-11-07 21:39:44.913.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.239 (0.240) seconds
+Test Suite 'OscillatorTests' started at 2026-11-07 21:39:44.913.
+Test Case '-[RheaRFCoreTests.OscillatorTests testArbitraryRenderLengthsProduceTheSameContinuousSignal]' started.
+Test Case '-[RheaRFCoreTests.OscillatorTests testArbitraryRenderLengthsProduceTheSameContinuousSignal]' passed (0.004 seconds).
+Test Case '-[RheaRFCoreTests.OscillatorTests testStandardCarrierRepeatsAfterTwelveSamples]' started.
+Test Case '-[RheaRFCoreTests.OscillatorTests testStandardCarrierRepeatsAfterTwelveSamples]' passed (0.000 seconds).
+Test Suite 'OscillatorTests' passed at 2026-11-07 21:39:44.917.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'PhaseSensingTests' started at 2026-11-07 21:39:44.917.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testExplicitCalibrationResetDoesNotMutateTheCaptureQueue]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testExplicitCalibrationResetDoesNotMutateTheCaptureQueue]' passed (0.017 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testGapInsideAnalysisFrameIsRejected]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testGapInsideAnalysisFrameIsRejected]' passed (0.005 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testKnownPhaseChangesRemainCorrectAcrossNonintegerCycleFrames]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testKnownPhaseChangesRemainCorrectAcrossNonintegerCycleFrames]' passed (0.030 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testLargeCaptureTimestampDoesNotLoseCarrierPhasePrecision]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testLargeCaptureTimestampDoesNotLoseCarrierPhasePrecision]' passed (0.023 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testNonFiniteSampleDoesNotPoisonLaterFrames]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testNonFiniteSampleDoesNotPoisonLaterFrames]' passed (0.012 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testOverflowInvalidatesAtTheActualCaptureGapAndNeverBridgesIt]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testOverflowInvalidatesAtTheActualCaptureGapAndNeverBridgesIt]' passed (0.023 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testSilenceInvalidatesPhaseAndNextToneStartsANewReference]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testSilenceInvalidatesPhaseAndNextToneStartsANewReference]' passed (0.023 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testStrongOffFrequencyEnergyFailsQualityGate]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testStrongOffFrequencyEnergyFailsQualityGate]' passed (0.011 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testTinyPureToneCannotAcquireLockDespiteHighQualityRatio]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testTinyPureToneCannotAcquireLockDespiteHighQualityRatio]' passed (0.011 seconds).
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testUnavailableHardwareTimestampCannotEstablishBaseline]' started.
+Test Case '-[RheaRFCoreTests.PhaseSensingTests testUnavailableHardwareTimestampCannotEstablishBaseline]' passed (0.006 seconds).
+Test Suite 'PhaseSensingTests' passed at 2026-11-07 21:39:45.080.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.161 (0.163) seconds
+Test Suite 'RingBufferTests' started at 2026-11-07 21:39:45.080.
+Test Case '-[RheaRFCoreTests.RingBufferTests testConcurrentProducerAndConsumerPreserveOrder]' started.
+Test Case '-[RheaRFCoreTests.RingBufferTests testConcurrentProducerAndConsumerPreserveOrder]' passed (0.036 seconds).
+Test Case '-[RheaRFCoreTests.RingBufferTests testEmptyPollDoesNotConsumePartialFrameOrInventDrops]' started.
+Test Case '-[RheaRFCoreTests.RingBufferTests testEmptyPollDoesNotConsumePartialFrameOrInventDrops]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.RingBufferTests testGapWithinAReadIsReported]' started.
+Test Case '-[RheaRFCoreTests.RingBufferTests testGapWithinAReadIsReported]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.RingBufferTests testMissingTimestampCannotBecomeAValidTimeline]' started.
+Test Case '-[RheaRFCoreTests.RingBufferTests testMissingTimestampCannotBecomeAValidTimeline]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.RingBufferTests testOverflowRejectsWholeBlockWithoutOverwritingUnreadData]' started.
+Test Case '-[RheaRFCoreTests.RingBufferTests testOverflowRejectsWholeBlockWithoutOverwritingUnreadData]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.RingBufferTests testWrappedStoragePreservesSamplesAndCaptureTime]' started.
+Test Case '-[RheaRFCoreTests.RingBufferTests testWrappedStoragePreservesSamplesAndCaptureTime]' passed (0.000 seconds).
+Test Suite 'RingBufferTests' passed at 2026-11-07 21:39:45.117.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.037 (0.038) seconds
+Test Suite 'SliceReplayTests' started at 2026-11-07 21:39:45.118.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testDecoderRejectsVersionReservedFlagsAndNonfinitePayload]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testDecoderRejectsVersionReservedFlagsAndNonfinitePayload]' passed (0.002 seconds).
+Test Case '-[RheaRFCoreTests.SliceReplayTests testDefaultTapeKeepsExactly2048WireRecords]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testDefaultTapeKeepsExactly2048WireRecords]' passed (0.034 seconds).
+Test Case '-[RheaRFCoreTests.SliceReplayTests testEveryGridFrequencyUsesBoundedIntegerAddressingAtLargeTimestamps]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testEveryGridFrequencyUsesBoundedIntegerAddressingAtLargeTimestamps]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.SliceReplayTests testFiniteDoubleAmplitudeOverflowCannotCrashReplayEncoding]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testFiniteDoubleAmplitudeOverflowCannotCrashReplayEncoding]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.SliceReplayTests testInvalidPhaseIsUnavailableAndNotAZeroMeasurement]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testInvalidPhaseIsUnavailableAndNotAZeroMeasurement]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.SliceReplayTests testMissingSpatialValuesAndMeasuredOriginRemainDistinct]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testMissingSpatialValuesAndMeasuredOriginRemainDistinct]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.SliceReplayTests testTapeWrapsChronologicallyAndRetainsSourceAndSpectrum]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testTapeWrapsChronologicallyAndRetainsSourceAndSpectrum]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.SliceReplayTests testWireRecordHas64BytesAndIndependentLittleEndianOffsets]' started.
+Test Case '-[RheaRFCoreTests.SliceReplayTests testWireRecordHas64BytesAndIndependentLittleEndianOffsets]' passed (0.000 seconds).
+Test Suite 'SliceReplayTests' passed at 2026-11-07 21:39:45.157.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.038 (0.039) seconds
+Test Suite 'SpectrumTests' started at 2026-11-07 21:39:45.157.
+Test Case '-[RheaRFCoreTests.SpectrumTests testBinCenteredToneUsesHannCoherentGainAndDBFSAmplitude]' started.
+Test Case '-[RheaRFCoreTests.SpectrumTests testBinCenteredToneUsesHannCoherentGainAndDBFSAmplitude]' passed (0.037 seconds).
+Test Case '-[RheaRFCoreTests.SpectrumTests testDCAndNyquistAreNotDoubled]' started.
+Test Case '-[RheaRFCoreTests.SpectrumTests testDCAndNyquistAreNotDoubled]' passed (0.019 seconds).
+Test Case '-[RheaRFCoreTests.SpectrumTests testEngineOmitsSpectraForInvalidTimestampsAndIntraFrameCaptureGaps]' started.
+Test Case '-[RheaRFCoreTests.SpectrumTests testEngineOmitsSpectraForInvalidTimestampsAndIntraFrameCaptureGaps]' passed (0.009 seconds).
+Test Case '-[RheaRFCoreTests.SpectrumTests testEnginePublishesSampleSpectrumEvenWhenToneIsBelowLossGate]' started.
+Test Case '-[RheaRFCoreTests.SpectrumTests testEnginePublishesSampleSpectrumEvenWhenToneIsBelowLossGate]' passed (0.011 seconds).
+Test Case '-[RheaRFCoreTests.SpectrumTests testFFTMatchesIndependentDirectDFTForMixedAndOffBinSignals]' started.
+Test Case '-[RheaRFCoreTests.SpectrumTests testFFTMatchesIndependentDirectDFTForMixedAndOffBinSignals]' passed (0.015 seconds).
+Test Case '-[RheaRFCoreTests.SpectrumTests testSilenceIsFiniteAndInvalidInputDoesNotPoisonFollowingTransforms]' started.
+Test Case '-[RheaRFCoreTests.SpectrumTests testSilenceIsFiniteAndInvalidInputDoesNotPoisonFollowingTransforms]' passed (0.018 seconds).
+Test Suite 'SpectrumTests' passed at 2026-11-07 21:39:45.267.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.109 (0.110) seconds
+Test Suite 'SyntheticSignalTests' started at 2026-11-07 21:39:45.267.
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testDefaultMotionRemainsAccurateBeyondDoubleExactIntegerClockRange]' started.
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testDefaultMotionRemainsAccurateBeyondDoubleExactIntegerClockRange]' passed (0.002 seconds).
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testDisplacementPhaseIsAppliedAtEverySampleWithCorrectSign]' started.
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testDisplacementPhaseIsAppliedAtEverySampleWithCorrectSign]' passed (0.001 seconds).
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testGenerationMayEndAtMaximumTimestampWithoutCrossingIt]' started.
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testGenerationMayEndAtMaximumTimestampWithoutCrossingIt]' passed (0.000 seconds).
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testRequestedSNRUsesSignalAndNoiseRMSWithoutClipping]' started.
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testRequestedSNRUsesSignalAndNoiseRMSWithoutClipping]' passed (0.185 seconds).
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testSameSeedAndTimelineAreIndependentOfCallbackLengths]' started.
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testSameSeedAndTimelineAreIndependentOfCallbackLengths]' passed (0.006 seconds).
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testSeedChangesNoiseAndSeekingUsesTheRequestedSampleClock]' started.
+Test Case '-[RheaRFCoreTests.SyntheticSignalTests testSeedChangesNoiseAndSeekingUsesTheRequestedSampleClock]' passed (0.001 seconds).
+Test Suite 'SyntheticSignalTests' passed at 2026-11-07 21:39:45.464.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.196 (0.197) seconds
+Test Suite 'RheaRFSpannerPackageTests.xctest' passed at 2026-11-07 21:39:45.464.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.783 (0.790) seconds
+Test Suite 'All tests' passed at 2026-11-07 21:39:45.464.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.783 (0.793) seconds
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

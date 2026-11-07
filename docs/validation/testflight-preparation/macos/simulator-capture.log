@@ -1,0 +1,10 @@
+Simulator: iPhone 17 Pro (25C22EBC-57CC-4272-8C91-050D3D572B32)
+org.timelabs.RheaRFSpanner: 11732
+Captured 01-idle: 655041 bytes
+org.timelabs.RheaRFSpanner: 11904
+Captured 02-demo-field: 1500032 bytes
+org.timelabs.RheaRFSpanner: 13379
+Captured 03-demo-waterfall: 695682 bytes
+Running simulator-hosted session integration tests
+Result bundle: build/test-results/ObservatorySession-b307a1fcad214e8e8e680c2481d31686.xcresult
+Simulator-hosted session integration tests passed

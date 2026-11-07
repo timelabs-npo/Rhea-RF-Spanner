@@ -5,6 +5,7 @@ on:
     branches: [main, rhea-rf-spanner/bootstrap-2026-11-07]
     paths:
       - 'App/**'
+      - 'AppTests/**'
       - 'Sources/**'
       - 'Tests/**'
       - 'Config/**'
@@ -21,19 +22,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: rhea-rf-spanner-${{ github.ref }}
+  group: rhea-rf-spanner-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   compile:
     name: Swift core and unsigned iOS app
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Check out this exact commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Select Xcode 26.3 and identify the project
         shell: bash
         run: |
@@ -48,6 +50,13 @@ jobs:
             echo 'Rhea RF Spanner source snapshot is absent.' >&2
             exit 1
           fi
+      - name: Verify installed distribution tooling without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RHEA_PROJECT_DIR"
+          mkdir -p build/logs
+          bash scripts/testflight.sh preflight 2>&1 | tee build/logs/testflight-preflight.log
       - name: Compile and run the Swift core tests
         shell: bash
         run: |
@@ -66,6 +75,12 @@ jobs:
           set -euo pipefail
           cd "$RHEA_PROJECT_DIR"
           bash scripts/build.sh device
+      - name: Launch silent DEMO and capture the native interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RHEA_PROJECT_DIR"
+          python3 scripts/capture_simulator.py 2>&1 | tee build/logs/simulator-capture.log
       - name: Preserve compiler and test logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -73,6 +88,9 @@ jobs:
           name: rhea-rf-spanner-build-${{ github.sha }}
           path: |
             build/logs/
+            build/screenshots/
+            build/test-results/
             projects/rhea-rf-spanner/build/logs/
+            projects/rhea-rf-spanner/build/screenshots/
           if-no-files-found: warn
           retention-days: 7

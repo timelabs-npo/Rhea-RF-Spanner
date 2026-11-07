@@ -12,13 +12,16 @@ Use TestFlight for beta distribution. The first externally tested build is subje
 
 ## Feature description to keep consistent
 
-**Product name:** Rhea RF Spanner  
-**Feature description:** Acoustic phase experiment using the built-in speaker and microphone.  
-**Tone:** 20 kHz, fixed digital amplitude of 0.02 full scale; system volume and hardware affect acoustic output.  
-**Supported session:** Built-in audio route at an actual 48 kHz sample rate, active foreground, explicit agreement and Start, up to 60 seconds.  
-**Displayed result:** Relative acoustic phase and a conditional phase-to-displacement model.  
-**Visualization:** An abstract representation of phase, not a scene reconstruction.  
-**Application data flow:** Volatile-memory processing, no audio-file storage, no app telemetry upload, no login or analytics SDK.
+| Attribute | Release description |
+| --- | --- |
+| Product name | Rhea RF Spanner. |
+| Feature description | Acoustic phase experiment using the built-in speaker and microphone. |
+| LIVE tone | Selectable 18–22 kHz carrier in 500 Hz steps, fixed digital amplitude of 0.02 full scale; system volume and hardware affect acoustic output. |
+| Supported LIVE session | Built-in audio route at an actual 48 kHz sample rate, active foreground, explicit agreement and Record, up to 60 seconds. Retuning starts a new acquisition/reference epoch without extending the recording limit. |
+| Modes | LIVE uses the built-in microphone and speaker; DEMO generates silent deterministic synthetic samples through the same DSP; REPLAY reads retained result frames while preserving their original source. |
+| Displayed result | Relative acoustic phase, a conditional phase-to-displacement model, fitted-tone quality, and an FFT-derived spectrum. |
+| Visualization | LIVE Field is abstract single-probe phase; DEMO Field is explicitly synthetic; Waterfall shows frequency and sample age. Pose and LiDAR depth are unavailable. None is a spatial reconstruction or temperature measurement. |
+| Application data flow | Volatile-memory samples and bounded result/spectrum replay; no raw-audio files, app telemetry upload, login, or analytics SDK. |
 
 The product name is retained. Descriptions must explain that this release uses acoustic signals and does not implement RF acquisition. Do not advertise absolute distance, hardware-independent accuracy, inaudibility, a calibrated safe sound level, zero jitter, or recognition of specific targets without evidence for that claim.
 
@@ -40,13 +43,13 @@ Relevant sections are **2.1, 2.2, 2.5.1, 2.5.14, 2.5.19, and 5.1.1** of the [App
 
 The `NSMicrophoneUsageDescription` in the app's property list is:
 
-> Rhea RF Spanner uses the microphone during an experiment you start to analyze the phase of its 20 kHz acoustic tone. Audio is processed on this device and is not saved or uploaded.
+> Rhea RF Spanner uses the microphone only during a LIVE experiment you start to analyze its selected 18–22 kHz acoustic tone. Raw audio is processed on this device and is not recorded or uploaded. DEMO and Replay do not use the microphone.
 
 The purpose string must match the released implementation. Apple explains the requirement for a specific explanation in [Write clear purpose strings](https://developer.apple.com/help/app-review/guideline-reference/5-1-1-purpose-strings). `NSMicrophoneUsageDescription` is required for microphone access; see [requestRecordPermission(completionHandler:)](https://developer.apple.com/documentation/avfaudio/avaudioapplication/requestrecordpermission(completionhandler:)).
 
 ## Privacy manifest
 
-The app must bundle a syntactically valid `PrivacyInfo.xcprivacy` property list with values that match the code. For the present data flow, no tracking and an empty collected-data array describe the app's own behavior, subject to verification of the complete release bundle. The current application source also has an empty accessed-API array: animation advances by a draw-frame count, acoustic timing uses sample times/counts, and it does not directly call the system-boot-time APIs below.
+The app must bundle a syntactically valid `PrivacyInfo.xcprivacy` property list with values that match the code. For the present data flow, no tracking and an empty collected-data array describe the app's own behavior, subject to verification of the complete release bundle. The Observatory update uses ProcessInfo.systemUptime for the session's elapsed-time limit and DEMO pacing, so its accessed-API array declares NSPrivacyAccessedAPICategorySystemBootTime with reason 35F9.1. It does not retain or transmit a system boot timestamp.
 
 If `mach_absolute_time()` or `ProcessInfo.systemUptime` is used to compute elapsed animation/session time, declare `NSPrivacyAccessedAPICategorySystemBootTime` with reason `35F9.1`. That reason covers elapsed in-app time and timer calculations. Do not add reasons for APIs absent from the implementation or reuse this declaration for a different purpose. Sources: [Required reason API categories](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype) and [Adding a privacy manifest](https://developer.apple.com/documentation/bundleresources/adding-a-privacy-manifest-to-your-app-or-third-party-sdk).
 
@@ -72,6 +75,7 @@ Validate the plist, its target membership, and its final location in the built a
 
 ## Review materials
 
+- [TestFlight.md](TestFlight.md): protected manual signing, archive/export, and explicit optional upload workflow.
 - [AppReviewLetter.md](AppReviewLetter.md): full accompanying explanation.
 - [ReviewTestPlan.md](ReviewTestPlan.md): reviewer navigation and reproducible device checks.
 - [PrivacyPolicy.md](PrivacyPolicy.md): policy text and its outstanding contact/publication fields.

@@ -1,0 +1,96 @@
+{
+  "source_commit": "6c706d6ab1c374e8bb2d5b1214d6bb13418bf6ee",
+  "run_id": 42413050294,
+  "url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42413050294",
+  "run_attempt": 1,
+  "conclusion": "success",
+  "created_at_utc": "2026-11-07T20:51:27Z",
+  "updated_at_utc": "2026-11-07T21:01:33Z",
+  "artifact_id": 13591085183,
+  "artifact_zip_sha256": "079f9f127dd002e6a55ba7f7a3d8bbb89fc626ec10ef8b249f6c348e233ccd96",
+  "jobs": [
+    {
+      "id": 128525095112,
+      "name": "Swift core and unsigned iOS app",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T20:51:32Z",
+          "completed_at_utc": "2026-11-07T20:51:33Z"
+        },
+        {
+          "name": "Check out this exact commit",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T20:51:33Z",
+          "completed_at_utc": "2026-11-07T20:51:35Z"
+        },
+        {
+          "name": "Select Xcode 26.3 and identify the project",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T20:51:35Z",
+          "completed_at_utc": "2026-11-07T20:51:36Z"
+        },
+        {
+          "name": "Compile and run the Swift core tests",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T20:51:36Z",
+          "completed_at_utc": "2026-11-07T20:52:24Z"
+        },
+        {
+          "name": "Compile the iOS Simulator app",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T20:52:24Z",
+          "completed_at_utc": "2026-11-07T20:53:46Z"
+        },
+        {
+          "name": "Compile the unsigned iOS device app",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T20:53:46Z",
+          "completed_at_utc": "2026-11-07T20:54:37Z"
+        },
+        {
+          "name": "Launch silent DEMO and capture the native interface",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T20:54:37Z",
+          "completed_at_utc": "2026-11-07T21:00:58Z"
+        },
+        {
+          "name": "Preserve compiler and test logs",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T21:00:58Z",
+          "completed_at_utc": "2026-11-07T21:01:01Z"
+        },
+        {
+          "name": "Post Check out this exact commit",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T21:01:01Z",
+          "completed_at_utc": "2026-11-07T21:01:03Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at_utc": "2026-11-07T21:01:03Z",
+          "completed_at_utc": "2026-11-07T21:01:29Z"
+        }
+      ]
+    }
+  ],
+  "results": {
+    "core_tests": {
+      "count": 41,
+      "failures": 0
+    },
+    "simulator_build": "BUILD SUCCEEDED",
+    "unsigned_device_build": "BUILD SUCCEEDED",
+    "hosted_session_tests": {
+      "count": 2,
+      "failures": 0
+    },
+    "simulator": "iPhone 17 Pro",
+    "xcode": "26.3",
+    "swift": "6.2.4",
+    "deployment_target": "iOS 18.0"
+  }
+}
