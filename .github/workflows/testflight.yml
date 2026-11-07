@@ -85,11 +85,16 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       RHEA_SOURCE_DIR: ${{ github.workspace }}/source
-      RHEA_OUTPUT_DIR: ${{ runner.temp }}/rhea-testflight-output-${{ github.run_id }}-${{ github.run_attempt }}
       SOURCE_COMMIT: ${{ inputs.source_commit }}
       WORKFLOW_COMMIT: ${{ github.sha }}
       BUILD_NUMBER: ${{ inputs.build_number }}
     steps:
+      - name: Set the per-run export directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'RHEA_OUTPUT_DIR=%s/rhea-testflight-output-%s-%s\n' \
+            "$RUNNER_TEMP" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
       - name: Check out trusted release tooling
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
