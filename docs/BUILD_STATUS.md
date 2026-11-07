@@ -1,6 +1,9 @@
 # Build evidence
 
-The records below describe the earlier baseline. The Observatory feature update has a separate evidence record in [OBSERVATORY_VALIDATION.md](OBSERVATORY_VALIDATION.md). A baseline pass does not validate the feature branch.
+The records below describe the earlier baseline. The Observatory feature update
+has a separate successful run, 41 core tests, two Simulator-hosted session tests,
+and native screenshots recorded in [OBSERVATORY_VALIDATION.md](OBSERVATORY_VALIDATION.md).
+A baseline pass does not validate the feature branch.
 
 Date of work: **2026-11-07**. This file distinguishes executed checks from work
 that still requires a usable build host or developer account.

@@ -5,7 +5,7 @@ iPhone's built-in speaker and microphone. The display name is **Rhea RF Spanner*
 the public source repository is
 [timelabs-npo/Rhea-RF-Spanner](https://github.com/timelabs-npo/Rhea-RF-Spanner).
 
-The Observatory update adds a **18–22 kHz acoustic carrier grid in 500 Hz steps**,
+The Observatory update adds an **18–22 kHz acoustic carrier grid in 500 Hz steps**,
 silent deterministic **DEMO**, in-memory **REPLAY**, and an actual sample-spectrum
 **Waterfall**. LIVE uses a verified 48 kHz built-in audio route. The app does not
 access RF samples, cellular baseband hardware, or wireless packet traffic.
@@ -20,21 +20,26 @@ False color does not imply thermal sensing.
 
 ## Build and validation status
 
-**Baseline CI passed on 7 November 2026:** the release signal core compiled,
-all 18 XCTest tests passed, and the iOS Simulator Debug and unsigned iOS
-device Release applications both built successfully with Xcode 26.3.
-See [the public GitHub Actions run](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42380978695),
-which tested source commit `05bc66497630ecc88382d8352002c1a3f0733896`.
-Physical-iPhone execution, signing, and TestFlight delivery remain separate
-release steps.
+**Observatory CI passed:** the release signal core compiled, all **41 core
+tests** and **2 Simulator-hosted session tests** passed, and the iOS Simulator
+Debug and unsigned iOS device Release apps built successfully with Xcode 26.3.
+The compiled app launched in an iPhone 17 Pro Simulator and produced actual
+idle, DEMO Field, and DEMO Waterfall screenshots.
+See [the successful GitHub Actions run](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42413050294),
+which tested source commit `6c706d6ab1c374e8bb2d5b1214d6bb13418bf6ee`.
+The evidence update changes documentation and captures only; its 43 build inputs
+match the tested commit. Full logs, test scope, and screenshots are retained in
+[docs/OBSERVATORY_VALIDATION.md](docs/OBSERVATORY_VALIDATION.md).
+Physical-iPhone acoustic validation, signing, and TestFlight delivery remain
+separate release steps.
 
-The Observatory feature branch has additional code and tests; its results are
-tracked separately in [docs/OBSERVATORY_VALIDATION.md](docs/OBSERVATORY_VALIDATION.md).
-The earlier 18-test run is not evidence for these new sources.
+| Silent DEMO Field | Sample-spectrum Waterfall |
+| --- | --- |
+| ![DEMO Field](docs/images/observatory/02-demo-field.png) | ![DEMO Waterfall](docs/images/observatory/03-demo-waterfall.png) |
 
-See [docs/BUILD_STATUS.md](docs/BUILD_STATUS.md) for commands, exit codes, source
-fingerprints, and the distinction between portable-core, iOS, signing, and
-physical-device results. Compiler logs are retained under `docs/validation/`.
+See [docs/BUILD_STATUS.md](docs/BUILD_STATUS.md) for historical baseline results
+and the distinction between portable-core, iOS, signing, and physical-device
+results. Compiler logs are retained under `docs/validation/`.
 A passing `swift build` builds the reusable core; it does not create an iOS app
 or an installable TestFlight build.
 
@@ -124,6 +129,7 @@ in this source repository.
 | `Package.swift` | Swift 6 package manifest for the reusable signal core |
 | `Sources/RheaRFCore/` | Z96 reference, SPSC queue, phase fit, FFT, deterministic simulator, 64-byte codec, Replay tape |
 | `Tests/RheaRFCoreTests/` | Numerical, transport, spectrum, simulation, codec, Replay, and concurrency tests |
+| `AppTests/` | Simulator-hosted mode, retune, display isolation, Replay, and foreground lifecycle checks |
 | `Config/` | Build settings and signing override example |
 | `scripts/` | Reproducible project generation, builds, archive/export, publication guard |
 | `docs/` | Signal model, architecture, review letter, review steps, privacy, validation |

@@ -37,7 +37,7 @@ target. Direct coupling and multipath are discussed in `SIGNAL_MODEL.md`.
 | Capture timestamp normalization | Serial input tap | One producer of the ring |
 | Signal estimator and calibration state | One dedicated serial DSP queue per run | One consumer of the ring |
 | Synthetic sample generation | Same serial DEMO queue as its DSP consumer | Separate from audio and display settings |
-| Telemetry | Immutable `Sendable` value | Published to main actor only for matching run ID |
+| Telemetry | Immutable `Sendable` value | Recorded in per-worker FIFO order; visible live data must match the active run |
 | Replay tape | Main actor | 2,048 encoded records plus bounded spectrum companions |
 | Metal view and uniforms | Main actor | Data-driven field/history; no audio pointers |
 
@@ -50,7 +50,10 @@ Every experiment creates fresh oscillator, ring, and estimator objects. There is
 no public ring reset function and no zeroing of storage while a callback might
 be using it. Callback contexts retain the objects they use. A retiring DSP worker
 can exit after a new session starts without sharing its storage or publishing
-stale telemetry into the new run.
+stale live telemetry into the new run. Retuning waits asynchronously for the
+retiring worker to post its final frames and completion before starting the
+replacement worker. Replay/scrubbing remain disabled while that retirement is
+in progress; its selection is reconciled once the bounded tape is stable.
 
 ## Validity
 

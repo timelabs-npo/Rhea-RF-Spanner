@@ -1,0 +1,23 @@
+{
+  "bundle": "org.timelabs.RheaRFSpanner",
+  "simulator": "iPhone 17 Pro",
+  "screenshots": [
+    {
+      "name": "01-idle.png",
+      "launch_arguments": []
+    },
+    {
+      "name": "02-demo-field.png",
+      "launch_arguments": [
+        "--observatory-demo"
+      ]
+    },
+    {
+      "name": "03-demo-waterfall.png",
+      "launch_arguments": [
+        "--observatory-demo",
+        "--observatory-waterfall"
+      ]
+    }
+  ]
+}
