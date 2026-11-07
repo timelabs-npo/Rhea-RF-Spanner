@@ -21,7 +21,11 @@ private/
 # Local distribution material and generated release products.
 __pycache__/
 *.pfx
+*.dpapi
+*.certSigningRequest
 *.cer
+request-created.json
+request.inf
 *.provisionprofile
 *.keychain
 *.keychain-db-wal

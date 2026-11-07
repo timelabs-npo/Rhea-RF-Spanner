@@ -30,7 +30,12 @@ function Invoke-GhPrivate {
     $start.RedirectStandardError = $true
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $start
+    $previousInputEncoding = [Console]::InputEncoding
     try {
+        # Process.Start constructs the StandardInput writer. On .NET Framework
+        # it can emit Console.InputEncoding's BOM before a BaseStream write.
+        # Select UTF-8 without a preamble, then restore the caller's encoding.
+        [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
         [void]$process.Start()
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
@@ -56,6 +61,7 @@ function Invoke-GhPrivate {
         }
         return $stdout.GetAwaiter().GetResult().Trim()
     } finally {
+        [Console]::InputEncoding = $previousInputEncoding
         $process.Dispose()
     }
 }

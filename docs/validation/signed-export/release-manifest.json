@@ -1,0 +1,13 @@
+{
+  "source_commit": "9bed85a1787aafabd919994e38eae66d3169c448",
+  "workflow_commit": "9bed85a1787aafabd919994e38eae66d3169c448",
+  "version": "0.2.0",
+  "build_number": "2",
+  "xcode": "Xcode 26.3\nBuild version 17C529",
+  "iphoneos_sdk": "26.2",
+  "ipa_sha256": "876dad4447f196badde027d7d682cfb2322016863cc29fc002cc0a222ad01e85",
+  "archive_zip_sha256": "5a2c4c388e0bf382ce334cefc4186cd4f7c9bd7024662831cb17c2b1904580a5",
+  "local_signature_and_profile_checks": "passed",
+  "apple_validation": "not_requested",
+  "apple_upload": "not_requested"
+}

@@ -4,17 +4,23 @@ The **Rhea RF Spanner — TestFlight** workflow builds one explicitly selected s
 
 Each successful export includes a manifest identifying the source commit, workflow revision, build number, toolchain, and artifact hashes. A signed export, an accepted upload, Apple processing, and TestFlight availability are separate stages. No signed archive or upload is established by static checks alone.
 
+## Executed signing result
+
+On **2026-11-07 UTC**, [run 42420624092, attempt 2](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420624092) successfully archived and exported source `9bed85a1787aafabd919994e38eae66d3169c448` as **Rhea RF Spanner 0.2.0 (2)**, bundle `org.timelabs.RheaRFSpanner`. Local signature/profile checks and temporary credential cleanup passed. The run used `upload_to_testflight=false`; Apple validation and upload were **not requested**. The [signed export validation record](SIGNED_EXPORT_VALIDATION.md) retains the release manifest and safe artifact metadata.
+
 ## 1. Supply the existing Apple assets
 
 Use an active Apple Developer team, its registered explicit bundle identifier, and an existing App Store Connect app record for that identifier. Do not use the repository's proposed bundle identifier unless it is actually registered to the selected team.
 
 Required existing files:
 
-- An **Apple Distribution** certificate and its private key exported together as a password-protected `.p12`.
+- An **Apple Distribution** or supported **iOS Distribution** certificate and its private key exported together as a password-protected `.p12`. The latter appears as an `iPhone Distribution:` signing identity and is accepted by the validator.
 - An **iOS App Store Connect distribution provisioning profile** for the same explicit App ID and certificate. Development, Ad Hoc, and Enterprise profiles are rejected.
 - For upload, an Apple-issued **App Store Connect team API key** `.p8`, its key ID, and its issuer UUID. Use an authorized role that can upload builds, such as Developer. This helper uses team-key authentication; individual keys use a different JWT model and are unsupported here.
 
 Apple's [profile creation instructions](https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile/) and [API key documentation](https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api) explain the assets. API key identifiers and issuer UUIDs are not the Apple Developer Team ID. App ID prefixes can also differ from Team ID; the validator handles that distinction.
+
+If the original private key is unavailable, follow [Windows signing preparation](WindowsSigning.md) to generate a local CSR, complete the issued certificate, and store the distribution identity securely. Downloading the public certificate again does not restore its private key. The Windows guide also covers the supported iOS Distribution option when the portal offers it, issuer-chain checks, and the Windows-user-bound DPAPI recovery copy. Create a matching provisioning profile for the newly issued certificate before dispatching a build.
 
 ## 2. Protect the GitHub environment
 
@@ -45,6 +51,8 @@ powershell.exe -STA -File .\scripts\windows\Import-TestFlightCredentials.ps1
 ```
 
 It requires an authenticated GitHub CLI account authorized to administer this environment. It does not dispatch the workflow or upload an app. `-ValidateOnly` loads its definitions without opening dialogs or reading credential files. Credential bytes and the p12 password belong in that local form, not in chat, source files, command-line arguments, or screenshots. GitHub also supports [setting environment secrets with `gh secret set --env`](https://cli.github.com/manual/gh_secret_set).
+
+For an identity generated with the [Windows CSR/completion helpers](WindowsSigning.md), completion writes the two distribution secrets directly using a generated password; it does not require copying that password into the intake form. Preserve its DPAPI recovery file and Windows user profile. The provisioning profile, nonsecret identifiers, and optional ASC upload key remain separate setup inputs.
 
 For an archive/export-only run, the ASC key and its identifiers are not required and are not passed into the signing step.
 
@@ -103,5 +111,7 @@ Upload success means the upload tool reported acceptance. Wait for Apple process
 Cleanup runs in each credential-handling command's `finally` block and again in an `always()` workflow step. It restores the keychain search list and removes the temporary keychain, installed profile, temporary signing configuration, API key file, decoded credential files, and private logs. The job uses a disposable GitHub-hosted Mac.
 
 Failure messages identify the failed stage without printing secret values. Common fixes are supplying a matching p12/profile, renewing an expired profile or certificate, confirming the p12 password and private key, selecting the correct team/bundle ID, completing Apple agreements, and choosing an unused build number. Full source/signing diagnostics can be reproduced on an authorized Mac with the same inputs; the automated job deliberately does not publish raw signing logs.
+
+Windows PowerShell 5.1 can prefix redirected stdin with a UTF-8 byte-order mark even when code subsequently writes directly to `StandardInput.BaseStream`. The included intake and completion helpers explicitly select UTF-8 without a preamble before starting the child process and restore the original console encoding afterward. This transport correction was verified using a nonsecret fixture and the subsequent successful signed export. If an older helper supplied the credentials, use the corrected helper to resubmit the same original identity; changing certificates does not repair an encoding error. See [Windows signing validation](WindowsSigning.md#validation-snapshot--2026-11-07-utc).
 
 The profile checks follow Apple's [TN3125](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles) and [TN2311 App ID prefix guidance](https://developer.apple.com/library/archive/technotes/tn2311/). Temporary keychain handling follows GitHub's [Xcode signing guide](https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications), with a signing-specific import ACL and per-run keychain password.

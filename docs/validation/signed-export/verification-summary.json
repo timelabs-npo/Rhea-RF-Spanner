@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "repository": "timelabs-npo/Rhea-RF-Spanner",
+  "source_commit": "9bed85a1787aafabd919994e38eae66d3169c448",
+  "workflow_commit": "9bed85a1787aafabd919994e38eae66d3169c448",
+  "run_id": 42420624092,
+  "run_url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420624092",
+  "run_attempt": 2,
+  "status": "completed",
+  "conclusion": "success",
+  "updated_at_utc": "2026-11-07T22:35:12Z",
+  "inputs": {
+    "build_number": "2",
+    "upload_to_testflight": false
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "result": "failure",
+      "stage": "Decode APPLE_DISTRIBUTION_P12_BASE64 before certificate import",
+      "fixed_message": "APPLE_DISTRIBUTION_P12_BASE64 must contain standard base64 for the original file.",
+      "artifacts_created": false,
+      "cleanup": "passed",
+      "apple_validation": "not_requested",
+      "apple_upload": "not_requested"
+    },
+    {
+      "attempt": 2,
+      "result": "success",
+      "source_gate": "passed",
+      "toolchain_preflight": "passed",
+      "signing_profile_and_product_checks": "passed",
+      "archive_and_export": "passed",
+      "artifact_preservation": "passed",
+      "cleanup": "passed",
+      "apple_validation": "not_requested",
+      "apple_upload": "not_requested"
+    }
+  ],
+  "transport_diagnosis": {
+    "input_fixture": "QUJD",
+    "before_received_hex": "efbbbf51554a44",
+    "before_byte_count": 7,
+    "after_received_hex": "51554a44",
+    "after_byte_count": 4,
+    "original_console_input_encoding_restored": true,
+    "private_values_inspected": false
+  },
+  "artifact": {
+    "id": 13593985601,
+    "name": "rhea-testflight-9bed85a1787aafabd919994e38eae66d3169c448-build-2",
+    "url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420624092/artifacts/13593985601",
+    "size_in_bytes": 2173438,
+    "sha256": "583b5f41817117ff32dd2ab5c0a1c18cfdefe2ce8b9620ab7269c87a4fde3ece",
+    "created_at_utc": "2026-11-07T22:35:08Z",
+    "expires_at_utc": "2026-11-10T22:35:07Z",
+    "files": [
+      "RheaRFSpanner.xcarchive.zip",
+      "RheaRFSpanner.ipa",
+      "release-manifest.json"
+    ]
+  },
+  "product": {
+    "bundle_id": "org.timelabs.RheaRFSpanner",
+    "display_name": "Rhea RF Spanner",
+    "version": "0.2.0",
+    "build_number": "2",
+    "minimum_os_version": "18.0",
+    "sdk": "iphoneos26.2",
+    "xcode_build": "17C529",
+    "device_family": [
+      1
+    ],
+    "ipa_size_in_bytes": 344560,
+    "ipa_sha256": "876dad4447f196badde027d7d682cfb2322016863cc29fc002cc0a222ad01e85",
+    "archive_zip_size_in_bytes": 1838141,
+    "archive_zip_sha256": "5a2c4c388e0bf382ce334cefc4186cd4f7c9bd7024662831cb17c2b1904580a5"
+  },
+  "icon_inspection": {
+    "icon_info": {
+      "CFBundleIcons~ipad": {
+        "CFBundlePrimaryIcon": {
+          "CFBundleIconFiles": [
+            "AppIcon60x60",
+            "AppIcon76x76"
+          ]
+        }
+      },
+      "CFBundleIcons": {
+        "CFBundlePrimaryIcon": {
+          "CFBundleIconFiles": [
+            "AppIcon60x60"
+          ],
+          "CFBundleIconName": "AppIcon"
+        }
+      }
+    },
+    "icon_asset_filenames": [
+      "Payload/RheaRFSpanner.app/AppIcon60x60@2x.png",
+      "Payload/RheaRFSpanner.app/Assets.car",
+      "Payload/RheaRFSpanner.app/AppIcon76x76@2x~ipad.png"
+    ],
+    "note": "Read only Info.plist icon keys and asset names; embedded profile was not read."
+  },
+  "main_checks": [
+    {
+      "name": "Native compile and test",
+      "run_id": 42420093956,
+      "conclusion": "success",
+      "url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420093956"
+    },
+    {
+      "name": "CodeQL",
+      "run_id": 42420093336,
+      "conclusion": "success",
+      "url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420093336"
+    },
+    {
+      "name": "Code Quality",
+      "run_id": 42420093579,
+      "conclusion": "success",
+      "url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420093579"
+    }
+  ],
+  "evidence_scope": "Only the release manifest and parsed metadata are retained here. No signing credentials, public certificate file, provisioning profile, raw signing log, IPA, or archive is published in this source directory.",
+  "limitations": [
+    "No Apple app validation or upload was requested.",
+    "No TestFlight processing or tester availability is established.",
+    "No physical-iPhone acoustic measurement is established.",
+    "Icon inspection checks Info.plist references and packaged asset names, not Apple's complete asset validation."
+  ]
+}
