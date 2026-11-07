@@ -5,21 +5,32 @@ iPhone's built-in speaker and microphone. The display name is **Rhea RF Spanner*
 the public source repository is
 [timelabs-npo/Rhea-RF-Spanner](https://github.com/timelabs-npo/Rhea-RF-Spanner).
 
-This implementation emits a fixed 20 kHz **sound** and estimates its received
-phase at a 48 kHz audio sample rate. It does not access RF samples, cellular
-baseband hardware, wireless packet traffic, or produce a spatial radar image.
-The animated rings are an abstract phase visualization. The displacement number
-is explicitly a conditional model derived from phase, not absolute distance.
+The Observatory update adds a **18–22 kHz acoustic carrier grid in 500 Hz steps**,
+silent deterministic **DEMO**, in-memory **REPLAY**, and an actual sample-spectrum
+**Waterfall**. LIVE uses a verified 48 kHz built-in audio route. The app does not
+access RF samples, cellular baseband hardware, or wireless packet traffic.
+Field graphics are explicitly abstract (LIVE) or synthetic (DEMO). They do not
+represent a measured spatial radar image. A phase-derived displacement is a
+conditional model, not an absolute range measurement.
+
+The native interface uses a full-screen Metal viewport, dark material panels,
+system menus, a carrier ruler, and separate acquisition/display controls. Its
+reference is the legibility and control hierarchy of professional camera apps.
+False color does not imply thermal sensing.
 
 ## Build and validation status
 
-**Public CI passed on 7 November 2026:** the release signal core compiled,
+**Baseline CI passed on 7 November 2026:** the release signal core compiled,
 all 18 XCTest tests passed, and the iOS Simulator Debug and unsigned iOS
 device Release applications both built successfully with Xcode 26.3.
 See [the public GitHub Actions run](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42380978695),
 which tested source commit `05bc66497630ecc88382d8352002c1a3f0733896`.
 Physical-iPhone execution, signing, and TestFlight delivery remain separate
 release steps.
+
+The Observatory feature branch has additional code and tests; its results are
+tracked separately in [docs/OBSERVATORY_VALIDATION.md](docs/OBSERVATORY_VALIDATION.md).
+The earlier 18-test run is not evidence for these new sources.
 
 See [docs/BUILD_STATUS.md](docs/BUILD_STATUS.md) for commands, exit codes, source
 fingerprints, and the distinction between portable-core, iOS, signing, and
@@ -47,7 +58,9 @@ bash scripts/build.sh all
 
 This runs the Swift core tests and compiles both the simulator application and
 the unsigned device application. Logs go to `build/logs/`. The simulator can
-show the interface but does not run this live acoustic experiment.
+run the silent DEMO and Replay; LIVE acoustic capture requires a physical iPhone.
+`python3 scripts/capture_simulator.py` captures the actual native idle, DEMO,
+and Waterfall screens after the simulator build. CI retains these as artifacts.
 
 For portable core work on Swift 6-capable macOS or Linux:
 
@@ -62,30 +75,37 @@ does not need a local laptop or to copy source code from chat.
 
 ## Using the app
 
-1. Read **Privacy & method** and the experiment notes while the app is idle.
-2. Agree to microphone use and tone output, then tap **Start experiment**.
-3. On the first run, grant the iOS microphone permission. Permission approval
-   returns to idle; tap **Start experiment** again when ready to emit the tone.
-4. Inspect the tone-fit quality, relative phase, conditional monostatic
-   displacement, and dropped-buffer counts. A lost/invalid signal clears the
-   phase reference; recovery starts a new reference instead of bridging a gap.
-5. Tap **Stop experiment** at any time. Sessions end after at most 60 seconds of
-   rendered audio, and the application also requests a stop with a UI timer.
+1. Read **Privacy & method** while idle. Select **DEMO** to explore the full
+   processing and display path without microphone permission or speaker output.
+2. For **LIVE**, agree to microphone use and the selected acoustic tone, then
+   start. On first permission approval the app returns to idle; start again
+   deliberately when ready to emit the tone.
+3. Select a carrier on the 500 Hz grid. Changing it starts a new acquisition
+   epoch and phase reference. Gain, palette, and persistence affect only the
+   display, not samples, fitted phase, or synthetic noise.
+4. Inspect the tone/residual ratio, phase, and spectrum. Signal loss invalidates
+   phase; recovery establishes a new reference without bridging the gap.
+5. Stop at any time. Select **REPLAY** to inspect retained slices and their
+   original LIVE/DEMO labels. No microphone or tone runs during Replay.
 
 The app stops when it loses foreground activity, audio is interrupted, the route
-changes, or audio services reset. It never automatically restarts. It accepts
+changes, or audio services reset. It never automatically restarts after these
+events. An explicit carrier change during a running session performs a controlled
+restart with a new reference. It accepts
 the built-in speaker/microphone route at the verified 48 kHz format and reports
 unsupported hardware routes instead of trapping on a failed precondition.
 
 The fixed transmit amplitude is 0.02 of digital full scale, with a 10 ms ramp.
-This is not a sound-pressure calibration or a claim that 20 kHz is inaudible.
+This is not a sound-pressure calibration or a claim that the tone is inaudible.
 Keep the phone away from ears, use the experiment with nearby people's agreement,
 and stop if it is uncomfortable. Start with low device volume.
 
 ## Data handling
 
-Microphone samples are processed in volatile memory. The app does not save or
-upload audio or measurements. There is no account, server, telemetry SDK,
+Microphone samples are processed in volatile memory. Up to 2,048 derived
+telemetry slices and their bounded companion spectra are retained in memory for
+Replay; raw audio is not recorded. Closing the process loses the tape. There is
+no file-export UI, account, server, telemetry SDK,
 advertising, remote configuration, background audio mode, or downloaded code.
 The privacy text is available in the app without microphone permission. The
 source privacy policy is [docs/PrivacyPolicy.md](docs/PrivacyPolicy.md).
@@ -102,8 +122,8 @@ in this source repository.
 | `App/Sources/` | SwiftUI interface, audio lifecycle, serial DSP integration, Metal display |
 | `App/Resources/` | Info.plist, privacy manifest, app icon |
 | `Package.swift` | Swift 6 package manifest for the reusable signal core |
-| `Sources/RheaRFCore/` | Oscillator, timestamp-preserving SPSC queue, estimator, telemetry contracts |
-| `Tests/RheaRFCoreTests/` | Synthetic signal, transport, discontinuity, and concurrency tests |
+| `Sources/RheaRFCore/` | Z96 reference, SPSC queue, phase fit, FFT, deterministic simulator, 64-byte codec, Replay tape |
+| `Tests/RheaRFCoreTests/` | Numerical, transport, spectrum, simulation, codec, Replay, and concurrency tests |
 | `Config/` | Build settings and signing override example |
 | `scripts/` | Reproducible project generation, builds, archive/export, publication guard |
 | `docs/` | Signal model, architecture, review letter, review steps, privacy, validation |
@@ -116,6 +136,8 @@ repairs to the supplied pasted script from intentional algorithm and lifecycle
 changes. The new estimator uses portable Double operations and a weighted
 least-squares tone model. It is not advertised as the original vDSP algorithm,
 as a zero-jitter implementation, or as a calibrated ranging instrument.
+[OBSERVATORY.md](docs/OBSERVATORY.md) defines the new modes, display semantics,
+frequency transitions, and explicit 64-byte encoding.
 
 ## TestFlight and App Store preparation
 

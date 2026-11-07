@@ -9,11 +9,16 @@ All application frameworks are public Apple APIs.
 ```mermaid
 flowchart TD
     Consent["Explicit consent and Start"] --> Audio["Foreground audio session"]
-    Audio --> Tone["20 kHz source node"]
+    Audio --> Tone["Selected 18–22 kHz tone"]
     Audio --> Tap["Microphone tap with sample time"]
     Tap --> Ring["Bounded SPSC queue"]
+    Demo["Silent seeded DEMO"] --> Ring
     Ring --> DSP["Serial tone estimator"]
     DSP --> UI["MainActor telemetry and Metal view"]
+    DSP --> Spectrum["Hann FFT"]
+    Spectrum --> UI
+    UI --> Tape["Bounded Replay tape"]
+    Tape --> UI
     Stop["Stop, inactive, route change or timeout"] --> Cancel["Atomic cancellation"]
     Cancel --> Audio
     Cancel --> DSP
@@ -31,8 +36,10 @@ target. Direct coupling and multipath are discussed in `SIGNAL_MODEL.md`.
 | Tone oscillator and output timeline | Serial source-node render callback | Cancellation and rendered-sample counters only |
 | Capture timestamp normalization | Serial input tap | One producer of the ring |
 | Signal estimator and calibration state | One dedicated serial DSP queue per run | One consumer of the ring |
+| Synthetic sample generation | Same serial DEMO queue as its DSP consumer | Separate from audio and display settings |
 | Telemetry | Immutable `Sendable` value | Published to main actor only for matching run ID |
-| Metal view and uniforms | Main actor | Render-frame animation counter; no audio pointers |
+| Replay tape | Main actor | 2,048 encoded records plus bounded spectrum companions |
+| Metal view and uniforms | Main actor | Data-driven field/history; no audio pointers |
 
 The `@unchecked Sendable` types each document their ownership assumptions. They
 are not assertions that arbitrary concurrent calls are safe. The audio callback
@@ -69,18 +76,25 @@ The app does not request background audio. Resigning active, route changes,
 interruptions, configuration changes, audio-service loss/reset, errors, and the
 session limit end the current run. Audio notification callbacks request atomic
 cancellation; AVAudioEngine is stopped and released by its main-actor owner,
-outside the engine's own configuration notification callback.
+outside the engine's own configuration notification callback. Explicit carrier
+changes create a new run/reference while preserving the recording's 60-second
+budget. DEMO never constructs an audio transceiver; Replay never starts one.
 
 ## Rendering and privacy manifest
 
 `PhaseShaders.metal` is a real Xcode-compiled shader source, loaded from the
-default Metal library. It renders a labeled abstract phase display, not detected
-objects. Animation time comes from rendered frames rather than a boot-time API.
+default Metal library. It renders abstract/synthetic phase graphics and an actual
+sample-spectrum waterfall. Image changes follow new records or display controls,
+not an independent clock presented as measurement. GPU uniform data uses float4
+groups with matching MSL alignment; it is distinct from the 64-byte wire record.
 
 `PrivacyInfo.xcprivacy` is a valid XML property list with tracking false and empty
-tracking-domain, collected-data, and required-reason-API arrays for this source
-set. Reaudit it whenever APIs or third-party code are added. The source contains
-no user-default, file-timestamp, disk-space, or boot-time API calls. The separate
+tracking-domain and collected-data arrays. The Observatory session timer and
+DEMO pacing use `ProcessInfo.systemUptime` solely for elapsed-time calculations;
+the manifest declares `NSPrivacyAccessedAPICategorySystemBootTime` with reason
+`35F9.1`. No boot timestamp is recorded or transmitted. See Apple's
+[approved reason](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype).
+Reaudit the manifest whenever APIs or third-party code are added. The separate
 microphone purpose string belongs in Info.plist; it is not replaced by the
 privacy manifest.
 

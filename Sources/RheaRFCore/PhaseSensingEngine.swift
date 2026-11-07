@@ -8,8 +8,13 @@ import Foundation
 /// own documented SPSC synchronization. The input workspace is allocated once.
 public final class PhaseSensingEngine: @unchecked Sendable {
     public let configuration: RadarConfiguration
+    /// Read on the owning serial DSP context, then pass this value to the UI.
+    /// Nonfinite input or an unusable in-frame capture timeline clears the
+    /// spectrum rather than retaining a stale or incorrectly timed frame.
+    public private(set) var latestSpectrum: SpectrumFrame?
     private let ringBuffer: SPSCFloatRingBuffer
     private let input: UnsafeMutablePointer<Float>
+    private let spectrumAnalyzer: SpectrumAnalyzer
     private let reference: CarrierReference
     private let weights: [Double]
     private let localCosine: [Double]
@@ -32,6 +37,7 @@ public final class PhaseSensingEngine: @unchecked Sendable {
         precondition(configuration.frameSize <= ringBuffer.capacity)
         self.ringBuffer = ringBuffer
         self.configuration = configuration
+        self.spectrumAnalyzer = SpectrumAnalyzer(sampleRateHz: configuration.sampleRateHz)
         self.input = .allocate(capacity: configuration.frameSize)
         self.input.initialize(repeating: 0, count: configuration.frameSize)
         let reference = CarrierReference(configuration: configuration)
@@ -78,6 +84,14 @@ public final class PhaseSensingEngine: @unchecked Sendable {
     public func processNextFrame() -> PhaseTelemetryFrame? {
         guard let read = ringBuffer.read(into: input, count: configuration.frameSize) else {
             return nil
+        }
+        if read.samplesAreContiguous && read.timestampsAreValid {
+            latestSpectrum = spectrumAnalyzer.analyze(
+                samples: UnsafeBufferPointer(start: input, count: configuration.frameSize),
+                sampleTimestamp: read.startSampleTime
+            )
+        } else {
+            latestSpectrum = nil
         }
         let discontinuity = !read.samplesAreContiguous || !read.timestampsAreValid
             || (expectedSampleTime != nil && expectedSampleTime != read.startSampleTime)

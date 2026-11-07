@@ -1,18 +1,21 @@
-Rhea RF Spanner is an acoustic phase experiment for a physical iPhone. It emits a fixed 20 kHz tone through the built-in speaker and analyzes microphone samples at an actual 48 kHz sample rate. This version does not acquire radio-frequency signals, access the baseband, scan wireless traffic, or form a radar image.
+Rhea RF Spanner is an acoustic phase observatory. LIVE emits a selected 18–22 kHz tone in 500 Hz steps through the built-in speaker and analyzes microphone samples at a verified 48 kHz rate. DEMO is silent and synthetic. Replay retains the original source label. This version does not acquire RF signals, scan wireless traffic, use ARKit/LiDAR, or form a measured spatial radar image.
 
-Review steps:
-1. Launch the app. It starts idle and does not request microphone permission on launch.
-2. Open "Privacy & method"; this information is available without microphone access.
-3. Use the built-in speaker and microphone, disconnect external audio routes, select a low device volume, and keep the speaker away from ears. Obtain the agreement of people nearby; the tone is not guaranteed to be inaudible.
-4. Enable the agreement toggle and tap "Start experiment". On first use, grant iOS microphone permission. Granting permission returns to idle: tap "Start experiment" again when ready.
-5. Observe the active microphone/tone banner, remaining-seconds counter, and numeric estimates. Tap "Stop experiment" at any time.
+Review navigation:
+1. Launch normally. The app starts idle and does not request microphone permission.
+2. Open Privacy & method without granting access.
+3. Select DEMO and use the central Record control. This runs the processing/display path without microphone permission, an audio session, or speaker output. Try Field, Waterfall, gain, persistence, and palettes. Field is a synthetic illustration; Waterfall is computed from synthetic samples.
+4. Stop, select Replay, and play or scrub the retained telemetry. The source remains DEMO. No raw audio is recorded.
+5. For LIVE, use a physical iPhone with its built-in audio route, select low system volume, keep the speaker away from ears, and obtain the agreement of people nearby. The tone is not guaranteed inaudible.
+6. Agree to the selected tone and microphone analysis, then tap Record. On first use, grant the iOS permission. Permission approval returns to idle; tap Record again deliberately.
+7. Observe the active source/frequency and Stop control. Changing carrier establishes a new phase-reference epoch. Display gain/persistence do not change the sample source or the fit.
 
-No app account, login credentials, external accessory, or backend is required. Live acoustic experiments are unavailable in the simulator. Unsupported routes/formats produce an explanation.
+No app account, login, accessory, or backend is required. LIVE is unavailable in Simulator; silent DEMO and Replay are available there. Unsupported audio routes/formats produce an explanation.
 
-Samples and current measurements remain in volatile memory. Application code does not save audio files or measurement histories, transcribe speech, identify people, upload audio/telemetry, or include analytics, advertising, remote configuration, or background recording. The microphone may also receive surrounding speech; it is processed only as part of the acoustic input.
+Microphone samples remain in volatile memory and are not recorded. Up to 2,048 derived 64-byte slices and bounded spectrum companions are retained in memory for Replay; no file export or persistent library is provided. Nothing is uploaded. There is no speech transcription, identification, analytics, advertising, tracking, remote configuration, downloaded code, or background recording. The microphone may receive surrounding speech as part of the acoustic signal.
 
-Audio is capped at 60 seconds of sampled data, with an automatic session timeout. Leaving the active app, an interruption, route change, or audio-service event stops the experiment. Opening "Privacy & method" also stops it. Returning never automatically restarts it.
+LIVE has a 60-second limit. Leaving the active app, an interruption, route change, or audio-service event stops it. Privacy & method also stops it. Returning never automatically restarts LIVE. Explicit frequency changes during a run preserve the existing time budget.
 
-The wave is explicitly an abstract visualization. Relative phase is a fitted estimate; displacement is a conditional phase model, not independently measured range. A strong tone does not establish a reflected target. Signal loss or a capture gap invalidates the reference; a subsequent valid estimate establishes a new zero. The fixed 0.02 digital amplitude is not a calibrated sound-pressure level.
+Tone/residual quality is a model-fit statistic, not calibrated SNR or proof of a reflected target. Phase-derived displacement is a conditional model, not measured range. Invalid samples and gaps invalidate the reference; recovery establishes a new zero. The transmit amplitude of 0.02 digital full scale is not a sound-pressure calibration. False-color palettes do not measure temperature.
 
-We welcome specific review questions and can provide the matching source snapshot and technical explanation through App Store Connect.
+Public source: https://github.com/timelabs-npo/Rhea-RF-Spanner
+Provide the exact submitted commit with the final build. We welcome technical questions and specific feedback through App Store Connect.

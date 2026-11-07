@@ -3,7 +3,8 @@
 ## What this implementation measures
 
 The implemented experiment uses a phone's audio output and microphone. Its
-nominal carrier is **20,000 Hz**, sampled at **48,000 samples per second**. The
+default carrier is **20,000 Hz**, selectable from **18,000–22,000 Hz** in **500 Hz**
+steps, sampled at **48,000 samples per second**. The
 analysis window contains **2,048 samples**, or approximately **42.67 ms**. The
 source code does not access a radio receiver, transmit RF, implement Wi-Fi or
 cellular channel sounding, or identify objects behind obstructions. The project
@@ -38,10 +39,12 @@ an integer number of carrier periods. The local complex phasor is `a + ib`.
 Rotating that phasor by `exp(−i ω t0)`, using the capture sample timestamp `t0`,
 removes the predictable advance from one analysis frame to the next.
 
-The default sampled carrier has a period of 12 samples because
-`20,000 / 48,000 = 5 / 12`. Both the oscillator and the analysis reference use
-this finite cycle. An arbitrarily long sample timestamp is reduced modulo that
-cycle **before** converting to floating point. The transmitter continues its
+The default sampled carrier has a minimal period of 12 samples because
+`20,000 / 48,000 = 5 / 12`. The Observatory grid uses a common 96-entry sampled
+cycle; at 20,500 Hz the minimal period is 96 (`41 / 96`). Both the oscillator and
+analysis reference use the same selected finite cycle. An arbitrarily long
+sample timestamp is reduced modulo that cycle **before** converting to floating
+point. The transmitter continues its
 cycle across every render callback, regardless of callback size. Repeating a
 2,048-sample waveform table would introduce a phase discontinuity, since 2,048
 is not divisible by 12.

@@ -16,6 +16,7 @@ enum ExperimentStopReason: Int, Sendable {
     case renderTimelineChanged
     case unsupportedBuffer
     case startFailed
+    case retuned
 
     var message: String {
         switch self {
@@ -30,6 +31,7 @@ enum ExperimentStopReason: Int, Sendable {
         case .renderTimelineChanged: "Playback sample timing became unavailable or discontinuous. The experiment has stopped."
         case .unsupportedBuffer: "An unsupported audio buffer was received. The experiment has stopped."
         case .startFailed: "The audio experiment could not start."
+        case .retuned: "Carrier changed. A new acquisition and phase reference have started."
         }
     }
 }
@@ -67,12 +69,12 @@ private final class ToneRenderContext: @unchecked Sendable {
     private var rendered: UInt64 = 0
     private var nextRenderSampleTime: Double?
 
-    init(control: ExperimentControl, configuration: RadarConfiguration) {
+    init(control: ExperimentControl, configuration: RadarConfiguration, maximumSamples: UInt64) {
         self.control = control
         oscillator = SineOscillator(
             configuration: configuration, amplitude: ExperimentControl.transmitAmplitude
         )
-        maximumSamples = UInt64(configuration.sampleRateHz) * ExperimentControl.maximumDurationSeconds
+        self.maximumSamples = maximumSamples
         rampSamples = UInt64(configuration.sampleRateHz / 100) // 10 ms at each end.
     }
 
@@ -155,11 +157,14 @@ private final class CaptureContext: @unchecked Sendable {
     private var fallbackNextSample: UInt64 = 0
     private var capturedSamples: UInt64 = 0
 
-    init(ring: SPSCFloatRingBuffer, control: ExperimentControl, configuration: RadarConfiguration) {
+    init(
+        ring: SPSCFloatRingBuffer, control: ExperimentControl,
+        configuration: RadarConfiguration, maximumSamples: UInt64
+    ) {
         self.ring = ring
         self.control = control
         expectedSampleRate = configuration.sampleRate
-        maximumSamples = UInt64(configuration.sampleRateHz) * ExperimentControl.maximumDurationSeconds
+        self.maximumSamples = maximumSamples
     }
 
     func receive(_ buffer: AVAudioPCMBuffer, at time: AVAudioTime) {
@@ -208,37 +213,98 @@ final class SignalProcessingSession: @unchecked Sendable {
     let control = ExperimentControl()
     let ring: SPSCFloatRingBuffer
     let configuration: RadarConfiguration
+    let maximumSamples: UInt64
     private let engine: PhaseSensingEngine
     private let queue = DispatchQueue(label: "org.timelabs.RheaRFSpanner.dsp", qos: .userInitiated)
+    private let started = Atomic<Bool>(false)
 
-    init(configuration: RadarConfiguration = .standard) {
+    init(configuration: RadarConfiguration = .standard, maximumSamples: UInt64? = nil) {
         self.configuration = configuration
+        let fullDuration = UInt64(configuration.sampleRateHz) * ExperimentControl.maximumDurationSeconds
+        self.maximumSamples = min(maximumSamples ?? fullDuration, fullDuration)
         ring = SPSCFloatRingBuffer(capacity: configuration.ringBufferCapacity)
         engine = PhaseSensingEngine(ringBuffer: ring, configuration: configuration)
     }
 
-    /// Called exactly once by the main-actor owner after successful audio startup.
+    /// Called exactly once. A nil simulation uses the microphone's ring producer.
+    /// A simulation creates only a deterministic sample generator on this queue;
+    /// it never creates AVAudioEngine, accesses AVAudioSession, or requests permission.
+    /// Every complete DSP frame is delivered. Display throttling must never affect
+    /// recording, the simulation parameters, or the acquisition clock.
     func start(
-        onFrame: @escaping @Sendable (PhaseTelemetryFrame) -> Void,
+        simulation: SimulationParameters? = nil,
+        onFrame: @escaping @Sendable (PhaseTelemetryFrame, SpectrumFrame?) -> Void,
         onStopped: @escaping @Sendable (ExperimentStopReason) -> Void
     ) {
+        precondition(!started.exchange(true, ordering: .acquiringAndReleasing), "A processing session starts only once.")
         queue.async { [self] in
-            var publicationCounter: UInt64 = 0
-            while !control.cancelled.load(ordering: .acquiring) {
-                if control.resetRequested.exchange(false, ordering: .acquiringAndReleasing) {
-                    engine.resetCalibration()
-                }
-                if let frame = engine.processNextFrame() {
-                    publicationCounter &+= 1
-                    if publicationCounter % 4 == 0 || frame.didRebaseline || !frame.isPhaseCoherent {
-                        onFrame(frame)
-                    }
-                } else {
-                    // This is a dedicated consumer queue, never an audio callback.
-                    Thread.sleep(forTimeInterval: 0.003)
-                }
+            if let simulation {
+                runSimulation(parameters: simulation, onFrame: onFrame)
+            } else {
+                runCapture(onFrame: onFrame)
             }
             onStopped(control.stopReason)
+        }
+    }
+
+    private func runCapture(onFrame: @Sendable (PhaseTelemetryFrame, SpectrumFrame?) -> Void) {
+        while !control.cancelled.load(ordering: .acquiring) {
+            applyReferenceRequest()
+            if let frame = engine.processNextFrame() {
+                onFrame(frame, engine.latestSpectrum)
+            } else {
+                // A dedicated consumer queue, never an audio callback.
+                Thread.sleep(forTimeInterval: 0.003)
+            }
+        }
+        if control.stopReason == .timeLimit {
+            // Preserve complete frames already captured at the scheduled limit.
+            // This is bounded by ring capacity and cannot restart acquisition.
+            while let frame = engine.processNextFrame() {
+                onFrame(frame, engine.latestSpectrum)
+            }
+        }
+    }
+
+    private func runSimulation(
+        parameters: SimulationParameters,
+        onFrame: @Sendable (PhaseTelemetryFrame, SpectrumFrame?) -> Void
+    ) {
+        let generator = SyntheticSignalGenerator(configuration: configuration, parameters: parameters)
+        let buffer = UnsafeMutablePointer<Float>.allocate(capacity: configuration.frameSize)
+        buffer.initialize(repeating: 0, count: configuration.frameSize)
+        defer {
+            buffer.deinitialize(count: configuration.frameSize)
+            buffer.deallocate()
+        }
+        let wallOrigin = ProcessInfo.processInfo.systemUptime
+        var sampleTime: UInt64 = 0
+        while sampleTime < maximumSamples, !control.cancelled.load(ordering: .acquiring) {
+            let due = wallOrigin + Double(sampleTime) / configuration.sampleRate
+            let remaining = due - ProcessInfo.processInfo.systemUptime
+            if remaining > 0 {
+                // Short sleeps keep stop/reference requests responsive. Sample
+                // values depend only on the synthetic sample clock and seed.
+                Thread.sleep(forTimeInterval: min(remaining, 0.01))
+                continue
+            }
+            applyReferenceRequest()
+            let count = min(configuration.frameSize, Int(maximumSamples - sampleTime))
+            generator.generate(into: buffer, count: count, startSampleTime: sampleTime)
+            guard !control.cancelled.load(ordering: .acquiring) else { break }
+            _ = ring.write(from: buffer, count: count, startSampleTime: sampleTime)
+            sampleTime &+= UInt64(count)
+            control.renderedSamples.store(sampleTime, ordering: .releasing)
+            while let frame = engine.processNextFrame() {
+                onFrame(frame, engine.latestSpectrum)
+            }
+        }
+        if sampleTime >= maximumSamples { control.requestStop(.timeLimit) }
+    }
+
+    private func applyReferenceRequest() {
+        if control.resetRequested.exchange(false, ordering: .acquiringAndReleasing) {
+            engine.resetCalibration()
         }
     }
 }
@@ -311,14 +377,20 @@ final class AudioTransceiver {
                 channels: 1, interleaved: false
             ) else { throw AudioStartError.noAudioFormat }
 
-            let capture = CaptureContext(ring: processing.ring, control: processing.control, configuration: configuration)
+            let capture = CaptureContext(
+                ring: processing.ring, control: processing.control,
+                configuration: configuration, maximumSamples: processing.maximumSamples
+            )
             input.installTap(
                 onBus: 0, bufferSize: AVAudioFrameCount(configuration.frameSize),
                 format: inputFormat, block: Self.makeTapBlock(context: capture)
             )
             tapInstalled = true
 
-            let tone = ToneRenderContext(control: processing.control, configuration: configuration)
+            let tone = ToneRenderContext(
+                control: processing.control, configuration: configuration,
+                maximumSamples: processing.maximumSamples
+            )
             let source = Self.makeSourceNode(format: mono, context: tone)
             sourceNode = source
             engine.attach(source)
@@ -372,6 +444,7 @@ final class AudioTransceiver {
     }
 
     func stop() {
+        processing.control.audioEnabled.store(false, ordering: .releasing)
         for token in notificationTokens { NotificationCenter.default.removeObserver(token) }
         notificationTokens.removeAll()
         engine.stop()

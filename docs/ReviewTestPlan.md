@@ -4,14 +4,14 @@ This is a protocol, **not a record of successful tests**. Compilation, simulator
 
 ## App Review navigation
 
-1. Open **Rhea RF Spanner**. The initial screen says **Acoustic phase experiment** and **IDLE — MICROPHONE OFF**. The app should not request microphone access on launch.
+1. Open **Rhea RF Spanner** normally. The observatory starts idle with the microphone off. It should not request microphone access on launch.
 2. Open **Privacy & method**. Read the acoustic experiment, privacy, model limitations, and sound-use information without granting microphone permission.
-3. On a physical iPhone using its built-in speaker and microphone, choose a low system volume, keep the device away from ears, and obtain the agreement of people nearby. A 20 kHz tone is not guaranteed to be inaudible.
-4. Enable **I agree to a 20 kHz speaker tone and live microphone analysis.** Tap **Start experiment**. On first use, respond to the iOS microphone permission request. Granting permission returns to idle with an explanation; tap **Start experiment** again to begin.
-5. When the session starts, observe **MICROPHONE + 20 kHz TONE ACTIVE**, the remaining-seconds counter, and the phase/quality displays. **Abstract phase visualization** describes a display effect; it is not a spatial map.
-6. Tap **Stop experiment**. The app returns to its idle state. It should require a new deliberate start for another experiment.
+3. Select **DEMO** and Record. Inspect the synthetic field and Waterfall without microphone permission or speaker output. Stop and select Replay; retained frames must remain labelled DEMO.
+4. For LIVE on a physical iPhone, use its built-in audio route, choose a low system volume, keep the device away from ears, and obtain nearby people's agreement. A selected 18–22 kHz tone is not guaranteed inaudible.
+5. Enable the agreement and tap Record. On first use, respond to the microphone request. Granting permission returns to idle; tap Record again deliberately. Observe source/frequency, remaining time, phase/quality, and Stop.
+6. Stop. A new acquisition requires a deliberate start. Change modes or inspect Replay; no microphone/tone may run in Replay.
 
-No app account, login credentials, external sensor, accessory, or server is required. An iOS simulator cannot establish the behavior of an iPhone's acoustic hardware. There is no simulated-signal demonstration mode in this version.
+No app account, login credentials, external sensor, accessory, or server is required. Simulator supports DEMO, Replay, and interface inspection; it cannot establish the behavior of an iPhone's acoustic hardware.
 
 ## Functional and privacy tests
 
@@ -41,6 +41,13 @@ Record the source commit, app version/build, device model, iOS version, installe
 | RES-01 | Repeat start/stop, reset, and interruption sequences. | No accumulating audio nodes, continuing callbacks from old sessions, or app crash. | Iteration count and observed behavior. |
 | QUAL-01 | Create a weak, noisy, or discontinuous signal. | Quality/continuity failures are represented; an invalid phase interval does not become an asserted reliable displacement. | Signal conditions, quality state, transport counters. |
 | QUAL-02 | Inject a missing or discontinuous playback sample clock in a development test. | Output is silenced and the session stops with a playback-timing explanation. | Injection method and resulting state. |
+| DEMO-01 | Start DEMO with microphone permission undetermined or denied. | Synthetic samples produce phase/spectrum; no permission request, microphone session, or tone output. | Source label, permission and audio-session observations. |
+| DEMO-02 | Change display gain/persistence/palette during DEMO. | Display changes; underlying sample parameters, phase and stored records are unaffected. | Controlled repeat with same seed and sample clock. |
+| FREQ-01 | Change between all nine carriers during acquisition. | Old run ends; new carrier and reference epoch appear; original 60 s budget remains. | Carrier labels, epoch IDs, elapsed time, captured audio frequency where applicable. |
+| REPLAY-01 | Record, stop, scrub, and play mixed LIVE/DEMO sessions. | Original source/carrier/epoch are retained; no acquisition runs during replay. | Record order, displayed source and hardware state. |
+| REPLAY-02 | Fill beyond 2,048 records and clear the tape. | Oldest records overwrite in order; clear releases retained records and spectra. | Counts, first/last timestamps, clear state. |
+| VIEW-01 | Run Waterfall with a known synthetic tone and a missing frame. | Actual frequency bins are shown; missing time remains a marked gap. | Screenshot, known tone and timestamps. |
+| A11Y-01 | Enable large text, VoiceOver, Reduce Motion and Reduce Transparency. | Controls stay reachable and labelled; graphics respect motion preference; opaque material fallback stays legible. | Device configuration and observed navigation. |
 
 The iOS microphone indicator can also communicate recent microphone use. Treat it as supporting evidence, together with app state and recorded access intervals, rather than requiring a particular indicator disappearance time.
 
