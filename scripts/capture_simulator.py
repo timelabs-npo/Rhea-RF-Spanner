@@ -10,6 +10,7 @@ import json
 import platform
 import subprocess
 import time
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,14 +70,18 @@ def main() -> None:
     architecture = platform.machine()
     if architecture not in {"arm64", "x86_64"}:
         raise RuntimeError(f"Unsupported Simulator host architecture: {architecture}")
+    # xcodebuild refuses an existing result bundle. Preserve earlier evidence
+    # while allowing repeated captures in the same checkout.
+    result_bundle = test_output / f"ObservatorySession-{uuid.uuid4().hex}.xcresult"
     command = [
         "xcodebuild", "-project", "RheaRFSpanner.xcodeproj", "-scheme", "RheaRFSpanner",
         "-configuration", "Debug", "-destination", f"platform=iOS Simulator,id={udid},arch={architecture}",
         "-derivedDataPath", "build/DerivedData-simulator",
-        "-resultBundlePath", "build/test-results/ObservatorySession.xcresult",
+        "-resultBundlePath", str(result_bundle),
         "-only-testing:RheaRFSpannerTests", "CODE_SIGNING_ALLOWED=NO", "test",
     ]
     print("Running simulator-hosted session integration tests", flush=True)
+    print(f"Result bundle: {result_bundle.relative_to(ROOT)}", flush=True)
     result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, timeout=600)
     (ROOT / "build/logs/xcode-session-tests.log").write_text(result.stdout + result.stderr)
     if result.returncode:

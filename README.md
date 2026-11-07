@@ -27,8 +27,11 @@ The compiled app launched in an iPhone 17 Pro Simulator and produced actual
 idle, DEMO Field, and DEMO Waterfall screenshots.
 See [the successful GitHub Actions run](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42413050294),
 which tested source commit `6c706d6ab1c374e8bb2d5b1214d6bb13418bf6ee`.
-The evidence update changes documentation and captures only; its 43 build inputs
-match the tested commit. Full logs, test scope, and screenshots are retained in
+That evidence snapshot changed documentation and captures only; its 43 build
+inputs match the tested commit. The subsequent distribution-preparation change
+also fixes Waterfall replacement/gap handling and adds three renderer regression
+tests; its native CI result is recorded separately when available.
+Full logs, test scope, and screenshots are retained in
 [docs/OBSERVATORY_VALIDATION.md](docs/OBSERVATORY_VALIDATION.md).
 Physical-iPhone acoustic validation, signing, and TestFlight delivery remain
 separate release steps.
@@ -154,6 +157,16 @@ The signing override is `Config/Signing.local.xcconfig`, which is excluded from
 Git. `bash scripts/archive.sh` creates the signed archive only after the actual
 signing configuration is present. `scripts/export.sh` accepts team-specific
 export options; it does not invent an Apple team or upload an app automatically.
+
+The manually dispatched **TestFlight** workflow also supports a GitHub-hosted
+Mac, an exact reviewed source SHA, and existing signing assets supplied through
+the protected `testflight` environment. Its default is a signed archive and local
+IPA export. Apple validation/upload requires an explicit input. The included
+Windows intake form sends selected local credentials directly to encrypted
+GitHub environment secrets; it never starts a build or upload.
+See [the TestFlight operator guide](docs/TestFlight.md). Installing credentials
+and running the signed workflow are still required; unsigned CI is not a signed
+release.
 
 See [AppleSubmission.md](docs/AppleSubmission.md),
 [AppReviewLetter.md](docs/AppReviewLetter.md), and

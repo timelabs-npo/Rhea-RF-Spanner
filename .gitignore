@@ -18,3 +18,24 @@ Config/Signing.local.xcconfig
 private/
 **/Key-Recovery.json
 
+# Local distribution material and generated release products.
+__pycache__/
+*.pfx
+*.cer
+*.provisionprofile
+*.keychain
+*.keychain-db-wal
+*.keychain-db-shm
+*.p12.b64
+*.p12.base64
+*.p8.b64
+*.p8.base64
+*.mobileprovision.b64
+*.mobileprovision.base64
+*.ipa
+*.xcarchive/
+*.xcarchive.zip
+*.dSYM/
+*.dSYM.zip
+ExportOptions*.plist
+

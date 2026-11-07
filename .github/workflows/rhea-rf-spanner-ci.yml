@@ -50,6 +50,13 @@ jobs:
             echo 'Rhea RF Spanner source snapshot is absent.' >&2
             exit 1
           fi
+      - name: Verify installed distribution tooling without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RHEA_PROJECT_DIR"
+          mkdir -p build/logs
+          bash scripts/testflight.sh preflight 2>&1 | tee build/logs/testflight-preflight.log
       - name: Compile and run the Swift core tests
         shell: bash
         run: |

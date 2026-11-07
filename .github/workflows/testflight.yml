@@ -1,0 +1,146 @@
+name: Rhea RF Spanner — TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: 'Reviewed source commit: full 40-character lowercase SHA on main'
+        required: true
+        type: string
+      build_number:
+        description: 'Unused App Store Connect build number for this version (1–9999)'
+        required: true
+        type: string
+      upload_to_testflight:
+        description: 'Validate with Apple and upload the exported IPA to App Store Connect'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rhea-testflight-distribution
+  cancel-in-progress: false
+
+jobs:
+  validate_source:
+    name: Validate the exact reviewed source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate dispatch and inputs without signing credentials
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$DISPATCH_REF" != refs/heads/main ]; then
+            echo '::error::Run this distribution workflow from main. The testflight environment must also restrict deployment branches to main.'
+            exit 1
+          fi
+          if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::source_commit must be a full 40-character lowercase commit SHA, not a branch or tag.'
+            exit 1
+          fi
+          if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]{0,3}$ ]]; then
+            echo '::error::build_number must be an explicitly chosen integer from 1 through 9999.'
+            exit 1
+          fi
+      - name: Check out the trusted workflow revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the source commit to be part of reviewed main history
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          WORKFLOW_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if ! git cat-file -e "$SOURCE_COMMIT^{commit}" 2>/dev/null; then
+            echo '::error::The source commit is not available in this repository history.'
+            exit 1
+          fi
+          if [ "$(git rev-parse "$SOURCE_COMMIT^{commit}")" != "$SOURCE_COMMIT" ]; then
+            echo '::error::source_commit must identify the commit itself.'
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$SOURCE_COMMIT" "$WORKFLOW_COMMIT"; then
+            echo '::error::The source commit must be reachable from main at this workflow dispatch revision. Review and merge the release source first.'
+            exit 1
+          fi
+
+  archive:
+    name: Manual signing, export, and optional TestFlight upload
+    needs: validate_source
+    runs-on: macos-15
+    timeout-minutes: 45
+    environment: testflight
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      RHEA_SOURCE_DIR: ${{ github.workspace }}/source
+      RHEA_OUTPUT_DIR: ${{ runner.temp }}/rhea-testflight-output-${{ github.run_id }}-${{ github.run_attempt }}
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      WORKFLOW_COMMIT: ${{ github.sha }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+    steps:
+      - name: Check out trusted release tooling
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: release-tools
+          persist-credentials: false
+      - name: Check out the exact source commit to archive
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.source_commit }}
+          path: source
+          persist-credentials: false
+      - name: Check the installed Xcode export interface
+        shell: bash
+        run: bash release-tools/scripts/testflight.sh preflight
+      - name: Validate signing assets, archive, and export locally
+        id: sign
+        shell: bash
+        env:
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_ID }}
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APP_STORE_PROFILE_BASE64: ${{ secrets.APP_STORE_PROFILE_BASE64 }}
+        run: bash release-tools/scripts/testflight.sh archive
+      - name: Validate with Apple and upload the exported IPA
+        if: ${{ inputs.upload_to_testflight && steps.sign.outputs.exported == 'true' }}
+        shell: bash
+        env:
+          UPLOAD_TO_TESTFLIGHT: ${{ inputs.upload_to_testflight }}
+          ASC_PRIVATE_KEY_P8_BASE64: ${{ secrets.ASC_PRIVATE_KEY_P8_BASE64 }}
+          ASC_KEY_ID: ${{ vars.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ vars.ASC_ISSUER_ID }}
+        run: bash release-tools/scripts/testflight.sh upload
+      - name: Preserve the signed archive and exported IPA for review
+        if: ${{ !cancelled() && steps.sign.outputs.exported == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rhea-testflight-${{ inputs.source_commit }}-build-${{ inputs.build_number }}
+          path: |
+            ${{ env.RHEA_OUTPUT_DIR }}/RheaRFSpanner.xcarchive.zip
+            ${{ env.RHEA_OUTPUT_DIR }}/RheaRFSpanner.ipa
+            ${{ env.RHEA_OUTPUT_DIR }}/release-manifest.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Remove temporary signing credentials and profiles
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set +x
+          set -euo pipefail
+          if [ -f release-tools/scripts/testflight.sh ]; then
+            bash release-tools/scripts/testflight.sh cleanup
+          fi

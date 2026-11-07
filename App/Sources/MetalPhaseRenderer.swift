@@ -39,10 +39,15 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     }
 
     private struct HistoryIdentity: Equatable {
-        let first: UInt64?
-        let last: UInt64?
+        // Capture timestamps may repeat after an interruption. A timestamp is
+        // an axis coordinate, not a unique identity for a spectral record.
+        let frames: [SpectrumFrame]
         let end: UInt64?
-        let count: Int
+    }
+
+    private struct CachedSpectrumRow {
+        let frame: SpectrumFrame
+        let pixels: [SIMD2<Float>]
     }
 
     private let device: MTLDevice
@@ -58,7 +63,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     private var lastEpoch: UInt32?
     private var lastSource: UInt8?
     private var historyIdentity: HistoryIdentity?
-    private var spectrumRows: [UInt64: [SIMD2<Float>]] = [:]
+    private var spectrumRows: [UInt64: CachedSpectrumRow] = [:]
     private var spectrumAvailable = false
 
     init(view: MTKView) throws {
@@ -177,32 +182,24 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     private func prepareWaterfall(
         history: [SpectrumFrame], spectrum: SpectrumFrame?, endTimestamp: UInt64?
     ) {
-        var frames = Array(history.suffix(Self.maximumHistory))
-        if let spectrum, frames.last?.sampleTimestamp != spectrum.sampleTimestamp {
-            frames.append(spectrum)
+        var byTimestamp: [UInt64: SpectrumFrame] = [:]
+        for frame in history.suffix(Self.maximumHistory) {
+            byTimestamp[frame.sampleTimestamp] = frame
         }
-        let end = endTimestamp ?? spectrum?.sampleTimestamp ?? frames.last?.sampleTimestamp
+        // The explicit current spectrum takes precedence even when its sample
+        // timestamp is identical to a different record already in history.
+        if let spectrum { byTimestamp[spectrum.sampleTimestamp] = spectrum }
+        let end = endTimestamp ?? spectrum?.sampleTimestamp ?? history.last?.sampleTimestamp
+        var frames = byTimestamp.values.sorted { $0.sampleTimestamp < $1.sampleTimestamp }
         if let end { frames.removeAll { $0.sampleTimestamp > end } }
-        frames.sort { $0.sampleTimestamp < $1.sampleTimestamp }
-        var uniqueFrames: [SpectrumFrame] = []
-        uniqueFrames.reserveCapacity(min(frames.count, Self.maximumHistory))
-        for frame in frames {
-            if uniqueFrames.last?.sampleTimestamp == frame.sampleTimestamp {
-                uniqueFrames[uniqueFrames.count - 1] = frame
-            } else {
-                uniqueFrames.append(frame)
-            }
-        }
-        frames = Array(uniqueFrames.suffix(Self.maximumHistory))
-        let identity = HistoryIdentity(first: frames.first?.sampleTimestamp,
-                                       last: frames.last?.sampleTimestamp,
-                                       end: end, count: frames.count)
+        frames = Array(frames.suffix(Self.maximumHistory))
+        let identity = HistoryIdentity(frames: frames, end: end)
         guard identity != historyIdentity else { return }
 
         let retainedTimestamps = Set(frames.map(\.sampleTimestamp))
         spectrumRows = spectrumRows.filter { retainedTimestamps.contains($0.key) }
-        for frame in frames where spectrumRows[frame.sampleTimestamp] == nil {
-            spectrumRows[frame.sampleTimestamp] = resample(frame)
+        for frame in frames where spectrumRows[frame.sampleTimestamp]?.frame != frame {
+            spectrumRows[frame.sampleTimestamp] = CachedSpectrumRow(frame: frame, pixels: resample(frame))
         }
 
         guard let oldest = frames.first?.sampleTimestamp, let end, end >= oldest else {
@@ -220,11 +217,38 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         let height = max(1, Int(min(Double(Self.maximumHistory), ceil(span / hop) + 1)))
         let rowStep = height > 1 ? span / Double(height - 1) : 0
         let tolerance = max(hop * 0.55, rowStep * 0.5)
+        // The image positions each analysis frame at its timestamp. Its time
+        // cell extends half a hop on either side. Preserve uncovered intervals
+        // before nearest-row selection: otherwise downsampling can select valid
+        // neighbours on both sides of a missing frame and erase the gap.
+        let ages = frames.reversed().map { Double(end - $0.sampleTimestamp) }
+        var missingIntervals: [Range<Double>] = []
+        if let newestAge = ages.first, newestAge > hop * 0.5 {
+            missingIntervals.append(0..<(newestAge - hop * 0.5))
+        }
+        for index in 1..<ages.count {
+            let lower = ages[index - 1] + hop * 0.5
+            let upper = ages[index] - hop * 0.5
+            if lower < upper { missingIntervals.append(lower..<upper) }
+        }
         var pixels = Array(repeating: SIMD2<Float>(-160, 0), count: Self.spectrumWidth * height)
         var sourceIndex = frames.count - 1
+        var missingIndex = 0
         var hasValidPixels = false
         for row in 0..<height {
             let targetAge = rowStep * Double(row)
+            let intervalStart = max(0, targetAge - rowStep * 0.5)
+            let intervalEnd = min(span, targetAge + rowStep * 0.5)
+            while missingIndex < missingIntervals.count,
+                  missingIntervals[missingIndex].upperBound <= intervalStart {
+                missingIndex += 1
+            }
+            // A compressed row containing any missing interval is explicitly
+            // unavailable, rather than visually claiming continuous capture.
+            if missingIndex < missingIntervals.count,
+               missingIntervals[missingIndex].lowerBound < intervalEnd {
+                continue
+            }
             while sourceIndex > 0 {
                 let here = Double(end - frames[sourceIndex].sampleTimestamp)
                 let previous = Double(end - frames[sourceIndex - 1].sampleTimestamp)
@@ -233,7 +257,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
             }
             let age = Double(end - frames[sourceIndex].sampleTimestamp)
             guard abs(age - targetAge) <= tolerance,
-                  let sourceRow = spectrumRows[frames[sourceIndex].sampleTimestamp]
+                  let sourceRow = spectrumRows[frames[sourceIndex].sampleTimestamp]?.pixels
             else { continue }
             let offset = row * Self.spectrumWidth
             for column in 0..<Self.spectrumWidth {
@@ -247,6 +271,22 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
             spectrumAvailable = hasValidPixels
             historyIdentity = identity
         }
+    }
+
+    /// Copies the actual immutable upload for renderer regression checks. This
+    /// performs no GPU wait: the shared texture is only ever read after upload.
+    func copyWaterfallPixels() -> (width: Int, height: Int, pixels: [SIMD2<Float>]) {
+        let width = spectrumTexture.width
+        let height = spectrumTexture.height
+        var pixels = Array(repeating: SIMD2<Float>.zero, count: width * height)
+        pixels.withUnsafeMutableBufferPointer { buffer in
+            guard let address = buffer.baseAddress else { return }
+            spectrumTexture.getBytes(
+                address, bytesPerRow: width * MemoryLayout<SIMD2<Float>>.stride,
+                from: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0
+            )
+        }
+        return (width, height, pixels)
     }
 
     /// Nearest measured FFT bins, not an illustrated or synthesized spectrum.
