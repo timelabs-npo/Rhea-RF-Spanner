@@ -4,9 +4,15 @@ The **Rhea RF Spanner — TestFlight** workflow builds one explicitly selected s
 
 Each successful export includes a manifest identifying the source commit, workflow revision, build number, toolchain, and artifact hashes. A signed export, an accepted upload, Apple processing, and TestFlight availability are separate stages. No signed archive or upload is established by static checks alone.
 
-## Executed signing result
+## Executed signing and upload results
 
 On **2026-11-07 UTC**, [run 42420624092, attempt 2](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420624092) successfully archived and exported source `9bed85a1787aafabd919994e38eae66d3169c448` as **Rhea RF Spanner 0.2.0 (2)**, bundle `org.timelabs.RheaRFSpanner`. Local signature/profile checks and temporary credential cleanup passed. The run used `upload_to_testflight=false`; Apple validation and upload were **not requested**. The [signed export validation record](SIGNED_EXPORT_VALIDATION.md) retains the release manifest and safe artifact metadata.
+
+Later that day, [run 42423704040, attempt 1](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42423704040) rebuilt the same source/version/build using workflow revision `f073a364939080154c02bd347acce72f88a11c81` and `upload_to_testflight=true`. The run completed successfully: local signing/export checks, Apple validation, upload-tool acceptance, artifact preservation, and temporary credential cleanup all passed. Its manifest records `apple_validation=passed` and `apple_upload=accepted_by_upload_tool_processing_pending`.
+
+At **23:14:21 UTC**, a subsequent App Store Connect API check confirmed build 2 as `processingState=VALID` and its upload as `state=COMPLETE`, with empty errors, warnings, and infos arrays. The App Store Connect browser view initially displayed **Version 0.2.0, Build 2, Ready to Submit**.
+
+The build was then assigned to **Rhea RF Spanner Internal**. The final browser check showed **1 Tester**, **1 Build**, and **0.2.0 (2), Ready to Test**. Only the current account holder was added, with status **Invited** on November 7, 2026. Invitation acceptance and iPhone installation were not observed. No other testers, external test group, or external beta review were added. See [the upload validation record](TESTFLIGHT_UPLOAD_VALIDATION.md) for the observations and exact artifact hashes.
 
 ## 1. Supply the existing Apple assets
 

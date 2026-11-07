@@ -42,9 +42,18 @@ CodeQL, and Code Quality checks. It then produced a **signed archive and App
 Store Connect IPA for version 0.2.0, build 2** in
 [distribution run 42420624092, attempt 2](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420624092).
 The [signed export validation record](docs/SIGNED_EXPORT_VALIDATION.md) retains
-the manifest and artifact hashes. Apple validation/upload were not requested;
-TestFlight availability and physical-iPhone acoustic validation remain separate
-release steps.
+the manifest and artifact hashes for that export-only run. Subsequently,
+[distribution run 42423704040](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42423704040)
+rebuilt the same source/version/build, **passed Apple validation, and reported
+successful App Store Connect upload**. The
+[upload validation record](docs/TESTFLIGHT_UPLOAD_VALIDATION.md) identifies the
+uploaded IPA and its hashes. Apple processing, TestFlight availability, and
+physical-iPhone acoustic validation are separate stages. App Store Connect
+subsequently confirmed processing as **VALID** and displayed build 2 as
+**Ready to Test** after assignment to **Rhea RF Spanner Internal**. That group
+has one build and one tester with status **Invited**. Invitation acceptance,
+iPhone installation, and physical-device acoustic validation have not been
+observed.
 
 | Silent DEMO Field | Sample-spectrum Waterfall |
 | --- | --- |
@@ -179,8 +188,12 @@ See [the TestFlight operator guide](docs/TestFlight.md) and
 [Windows signing preparation](docs/WindowsSigning.md). The latter creates a
 local CSR, completes an Apple-issued certificate with its existing Windows key,
 and stores an encrypted recovery copy without printing private key material or
-passwords. The first signed export has completed; Apple validation, upload,
-processing, and tester availability have not been established by that export.
+passwords. Signed export and Apple validation/upload have completed for
+**0.2.0 (2)**. Apple processing and tester availability remain separate stages;
+processing is confirmed, and one internal tester is **Invited** to the group
+containing the **Ready to Test** build. Acceptance and installation remain
+unconfirmed.
+See the [upload validation record](docs/TESTFLIGHT_UPLOAD_VALIDATION.md).
 
 See [AppleSubmission.md](docs/AppleSubmission.md),
 [AppReviewLetter.md](docs/AppReviewLetter.md), and
