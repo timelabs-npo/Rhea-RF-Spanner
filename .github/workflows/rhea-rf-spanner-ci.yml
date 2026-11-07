@@ -1,0 +1,78 @@
+name: Rhea RF Spanner — compile and test
+
+on:
+  push:
+    branches: [main, rhea-rf-spanner/bootstrap-2026-11-07]
+    paths:
+      - 'App/**'
+      - 'Sources/**'
+      - 'Tests/**'
+      - 'Config/**'
+      - 'scripts/**'
+      - 'Package.swift'
+      - 'RheaRFSpanner.xcodeproj/**'
+      - '.github/workflows/rhea-rf-spanner-ci.yml'
+      - 'projects/rhea-rf-spanner/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rhea-rf-spanner-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Swift core and unsigned iOS app
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Check out this exact commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Select Xcode 26.3 and identify the project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /Applications/Xcode_26.3.app/Contents/Developer
+          echo 'DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer' >> "$GITHUB_ENV"
+          if [ -f Package.swift ] && [ -d App ]; then
+            echo 'RHEA_PROJECT_DIR=.' >> "$GITHUB_ENV"
+          elif [ -f projects/rhea-rf-spanner/Package.swift ]; then
+            echo 'RHEA_PROJECT_DIR=projects/rhea-rf-spanner' >> "$GITHUB_ENV"
+          else
+            echo 'Rhea RF Spanner source snapshot is absent.' >&2
+            exit 1
+          fi
+      - name: Compile and run the Swift core tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RHEA_PROJECT_DIR"
+          bash scripts/build.sh core
+      - name: Compile the iOS Simulator app
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RHEA_PROJECT_DIR"
+          bash scripts/build.sh simulator
+      - name: Compile the unsigned iOS device app
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RHEA_PROJECT_DIR"
+          bash scripts/build.sh device
+      - name: Preserve compiler and test logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rhea-rf-spanner-build-${{ github.sha }}
+          path: |
+            build/logs/
+            projects/rhea-rf-spanner/build/logs/
+          if-no-files-found: warn
+          retention-days: 7

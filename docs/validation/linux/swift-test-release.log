@@ -1,0 +1,69 @@
+[0/1] Planning build
+Building for production...
+[0/8] Write sources
+[1/8] Write swift-version-A514A49F55E8B7D.txt
+[3/9] Compiling RheaRFCore PhaseSensingEngine.swift
+[4/10] Compiling RheaRFCoreTests OscillatorTests.swift
+[4/10] /workspace/scratch/22f1bf3c606d/Rhea-RF-Spanner/.build/x86_64-unknown-linux-gnu/release/RheaRFSpannerPackageDiscoveredTests.derived/all-discovered-tests.swift
+[5/10] Write sources
+[7/11] Compiling RheaRFSpannerPackageDiscoveredTests RheaRFCoreTests.swift
+[7/11] /workspace/scratch/22f1bf3c606d/Rhea-RF-Spanner/.build/x86_64-unknown-linux-gnu/release/RheaRFSpannerPackageTests.derived/runner.swift
+[8/11] Write sources
+[10/12] Compiling RheaRFSpannerPackageTests runner.swift
+[10/12] Write Objects.LinkFileList
+[11/12] Linking RheaRFSpannerPackageTests.xctest
+Build complete! (16.06s)
+Test Suite 'All tests' started at 2026-11-07 13:38:18.675
+Test Suite 'release.xctest' started at 2026-11-07 13:38:18.678
+Test Suite 'OscillatorTests' started at 2026-11-07 13:38:18.678
+Test Case 'OscillatorTests.testArbitraryRenderLengthsProduceTheSameContinuousSignal' started at 2026-11-07 13:38:18.678
+Test Case 'OscillatorTests.testArbitraryRenderLengthsProduceTheSameContinuousSignal' passed (0.001 seconds)
+Test Case 'OscillatorTests.testStandardCarrierRepeatsAfterTwelveSamples' started at 2026-11-07 13:38:18.680
+Test Case 'OscillatorTests.testStandardCarrierRepeatsAfterTwelveSamples' passed (0.102 seconds)
+Test Suite 'OscillatorTests' passed at 2026-11-07 13:38:18.782
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.103 (0.103) seconds
+Test Suite 'PhaseSensingTests' started at 2026-11-07 13:38:18.782
+Test Case 'PhaseSensingTests.testExplicitCalibrationResetDoesNotMutateTheCaptureQueue' started at 2026-11-07 13:38:18.782
+Test Case 'PhaseSensingTests.testExplicitCalibrationResetDoesNotMutateTheCaptureQueue' passed (0.001 seconds)
+Test Case 'PhaseSensingTests.testGapInsideAnalysisFrameIsRejected' started at 2026-11-07 13:38:18.783
+Test Case 'PhaseSensingTests.testGapInsideAnalysisFrameIsRejected' passed (0.101 seconds)
+Test Case 'PhaseSensingTests.testKnownPhaseChangesRemainCorrectAcrossNonintegerCycleFrames' started at 2026-11-07 13:38:18.884
+Test Case 'PhaseSensingTests.testKnownPhaseChangesRemainCorrectAcrossNonintegerCycleFrames' passed (0.001 seconds)
+Test Case 'PhaseSensingTests.testLargeCaptureTimestampDoesNotLoseCarrierPhasePrecision' started at 2026-11-07 13:38:18.886
+Test Case 'PhaseSensingTests.testLargeCaptureTimestampDoesNotLoseCarrierPhasePrecision' passed (0.001 seconds)
+Test Case 'PhaseSensingTests.testNonFiniteSampleDoesNotPoisonLaterFrames' started at 2026-11-07 13:38:18.886
+Test Case 'PhaseSensingTests.testNonFiniteSampleDoesNotPoisonLaterFrames' passed (0.0 seconds)
+Test Case 'PhaseSensingTests.testOverflowInvalidatesAtTheActualCaptureGapAndNeverBridgesIt' started at 2026-11-07 13:38:18.887
+Test Case 'PhaseSensingTests.testOverflowInvalidatesAtTheActualCaptureGapAndNeverBridgesIt' passed (0.001 seconds)
+Test Case 'PhaseSensingTests.testSilenceInvalidatesPhaseAndNextToneStartsANewReference' started at 2026-11-07 13:38:18.887
+Test Case 'PhaseSensingTests.testSilenceInvalidatesPhaseAndNextToneStartsANewReference' passed (0.001 seconds)
+Test Case 'PhaseSensingTests.testStrongOffFrequencyEnergyFailsQualityGate' started at 2026-11-07 13:38:18.889
+Test Case 'PhaseSensingTests.testStrongOffFrequencyEnergyFailsQualityGate' passed (0.001 seconds)
+Test Case 'PhaseSensingTests.testTinyPureToneCannotAcquireLockDespiteHighQualityRatio' started at 2026-11-07 13:38:18.890
+Test Case 'PhaseSensingTests.testTinyPureToneCannotAcquireLockDespiteHighQualityRatio' passed (0.0 seconds)
+Test Case 'PhaseSensingTests.testUnavailableHardwareTimestampCannotEstablishBaseline' started at 2026-11-07 13:38:18.890
+Test Case 'PhaseSensingTests.testUnavailableHardwareTimestampCannotEstablishBaseline' passed (0.0 seconds)
+Test Suite 'PhaseSensingTests' passed at 2026-11-07 13:38:18.891
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.108 (0.108) seconds
+Test Suite 'RingBufferTests' started at 2026-11-07 13:38:18.891
+Test Case 'RingBufferTests.testConcurrentProducerAndConsumerPreserveOrder' started at 2026-11-07 13:38:18.891
+Test Case 'RingBufferTests.testConcurrentProducerAndConsumerPreserveOrder' passed (0.016 seconds)
+Test Case 'RingBufferTests.testEmptyPollDoesNotConsumePartialFrameOrInventDrops' started at 2026-11-07 13:38:18.907
+Test Case 'RingBufferTests.testEmptyPollDoesNotConsumePartialFrameOrInventDrops' passed (0.0 seconds)
+Test Case 'RingBufferTests.testGapWithinAReadIsReported' started at 2026-11-07 13:38:18.907
+Test Case 'RingBufferTests.testGapWithinAReadIsReported' passed (0.0 seconds)
+Test Case 'RingBufferTests.testMissingTimestampCannotBecomeAValidTimeline' started at 2026-11-07 13:38:18.907
+Test Case 'RingBufferTests.testMissingTimestampCannotBecomeAValidTimeline' passed (0.0 seconds)
+Test Case 'RingBufferTests.testOverflowRejectsWholeBlockWithoutOverwritingUnreadData' started at 2026-11-07 13:38:18.907
+Test Case 'RingBufferTests.testOverflowRejectsWholeBlockWithoutOverwritingUnreadData' passed (0.0 seconds)
+Test Case 'RingBufferTests.testWrappedStoragePreservesSamplesAndCaptureTime' started at 2026-11-07 13:38:18.908
+Test Case 'RingBufferTests.testWrappedStoragePreservesSamplesAndCaptureTime' passed (0.001 seconds)
+Test Suite 'RingBufferTests' passed at 2026-11-07 13:38:18.908
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.017 (0.017) seconds
+Test Suite 'release.xctest' passed at 2026-11-07 13:38:18.908
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.229 (0.229) seconds
+Test Suite 'All tests' passed at 2026-11-07 13:38:18.909
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.229 (0.229) seconds
+◇ Test run started.
+↳ Testing Library Version: 6.0.3 (18c42c19cac3faf)
+✔ Test run with 0 tests passed after 0.001 seconds.

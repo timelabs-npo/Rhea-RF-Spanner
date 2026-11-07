@@ -1,0 +1,18 @@
+Rhea RF Spanner is an acoustic phase experiment for a physical iPhone. It emits a fixed 20 kHz tone through the built-in speaker and analyzes microphone samples at an actual 48 kHz sample rate. This version does not acquire radio-frequency signals, access the baseband, scan wireless traffic, or form a radar image.
+
+Review steps:
+1. Launch the app. It starts idle and does not request microphone permission on launch.
+2. Open "Privacy & method"; this information is available without microphone access.
+3. Use the built-in speaker and microphone, disconnect external audio routes, select a low device volume, and keep the speaker away from ears. Obtain the agreement of people nearby; the tone is not guaranteed to be inaudible.
+4. Enable the agreement toggle and tap "Start experiment". On first use, grant iOS microphone permission. Granting permission returns to idle: tap "Start experiment" again when ready.
+5. Observe the active microphone/tone banner, remaining-seconds counter, and numeric estimates. Tap "Stop experiment" at any time.
+
+No app account, login credentials, external accessory, or backend is required. Live acoustic experiments are unavailable in the simulator. Unsupported routes/formats produce an explanation.
+
+Samples and current measurements remain in volatile memory. Application code does not save audio files or measurement histories, transcribe speech, identify people, upload audio/telemetry, or include analytics, advertising, remote configuration, or background recording. The microphone may also receive surrounding speech; it is processed only as part of the acoustic input.
+
+Audio is capped at 60 seconds of sampled data, with an automatic session timeout. Leaving the active app, an interruption, route change, or audio-service event stops the experiment. Opening "Privacy & method" also stops it. Returning never automatically restarts it.
+
+The wave is explicitly an abstract visualization. Relative phase is a fitted estimate; displacement is a conditional phase model, not independently measured range. A strong tone does not establish a reflected target. Signal loss or a capture gap invalidates the reference; a subsequent valid estimate establishes a new zero. The fixed 0.02 digital amplitude is not a calibrated sound-pressure level.
+
+We welcome specific review questions and can provide the matching source snapshot and technical explanation through App Store Connect.

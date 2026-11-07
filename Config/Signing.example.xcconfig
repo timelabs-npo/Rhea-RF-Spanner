@@ -1,0 +1,5 @@
+// Copy to Signing.local.xcconfig only on the authorized build Mac.
+// These are identifiers, not credentials. Use the actual Apple team and registered ID.
+DEVELOPMENT_TEAM = REPLACE_WITH_APPLE_TEAM_ID
+PRODUCT_BUNDLE_IDENTIFIER = REPLACE_WITH_REGISTERED_BUNDLE_ID
+

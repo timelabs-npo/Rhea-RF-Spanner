@@ -1,0 +1,49 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		94FE1748ABDFCEDEE63AD89D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Sources/AudioTransceiver.swift"; sourceTree = SOURCE_ROOT; };
+		0BE85B198C54688B1AFB5044 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Sources/ExperimentModel.swift"; sourceTree = SOURCE_ROOT; };
+		BD95C03EFDA8DE0848DB1C15 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Sources/ExperimentView.swift"; sourceTree = SOURCE_ROOT; };
+		A2FDA73C38AAEF1A2FFD5180 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Sources/MetalPhaseRenderer.swift"; sourceTree = SOURCE_ROOT; };
+		D15B4C9521FD0E516D551CBC = { isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = "App/Sources/PhaseShaders.metal"; sourceTree = SOURCE_ROOT; };
+		148B071BCB0DAE222D6EFDDF = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Sources/PrivacyMethodView.swift"; sourceTree = SOURCE_ROOT; };
+		06EF0089B8BCA56714CD7478 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Sources/RheaRFSpannerApp.swift"; sourceTree = SOURCE_ROOT; };
+		3AA005BAB8DC9F2DD1BD1BCC = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "App/Resources/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
+		B0E5D18AB35E9BE77584F6F2 = { isa = PBXFileReference; lastKnownFileType = text.xml; path = "App/Resources/PrivacyInfo.xcprivacy"; sourceTree = SOURCE_ROOT; };
+		9BE394201301D4F72927D500 = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "App/Resources/Info.plist"; sourceTree = SOURCE_ROOT; };
+		EE1E752050BF380B88186C3D = { isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Config/Project.xcconfig"; sourceTree = SOURCE_ROOT; };
+		EC25158BE6F7AF4B02418E31 = { isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Config/Signing.example.xcconfig"; sourceTree = SOURCE_ROOT; };
+		766696A7E2E2519494A54CFE = { isa = PBXBuildFile; fileRef = 94FE1748ABDFCEDEE63AD89D; };
+		FE39B44DD3B373E04328C27E = { isa = PBXBuildFile; fileRef = 0BE85B198C54688B1AFB5044; };
+		FAA84B912EFBBE72D04098D6 = { isa = PBXBuildFile; fileRef = BD95C03EFDA8DE0848DB1C15; };
+		D25A076CE09182503C5FB0DD = { isa = PBXBuildFile; fileRef = A2FDA73C38AAEF1A2FFD5180; };
+		126677033DCB5EF9EF05B420 = { isa = PBXBuildFile; fileRef = D15B4C9521FD0E516D551CBC; };
+		52011DA1835B7AF4B680FA00 = { isa = PBXBuildFile; fileRef = 148B071BCB0DAE222D6EFDDF; };
+		82A9AED4F3835912E94D66C9 = { isa = PBXBuildFile; fileRef = 06EF0089B8BCA56714CD7478; };
+		4AAA68298FA5E57B81A86BAF = { isa = PBXBuildFile; fileRef = 3AA005BAB8DC9F2DD1BD1BCC; };
+		7BB87A1DD03CE2DFAFA930F4 = { isa = PBXBuildFile; fileRef = B0E5D18AB35E9BE77584F6F2; };
+		4C62EC40DF63DF0873D128AE = { isa = XCLocalSwiftPackageReference; relativePath = "."; };
+		ED3DC570B697046E1D6DC405 = { isa = XCSwiftPackageProductDependency; package = 4C62EC40DF63DF0873D128AE; productName = RheaRFCore; };
+		BBE189F87790362F4781096F = { isa = PBXBuildFile; productRef = ED3DC570B697046E1D6DC405; };
+		DE62F1BD2E122BBF6BD45B9C = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (766696A7E2E2519494A54CFE,FE39B44DD3B373E04328C27E,FAA84B912EFBBE72D04098D6,D25A076CE09182503C5FB0DD,126677033DCB5EF9EF05B420,52011DA1835B7AF4B680FA00,82A9AED4F3835912E94D66C9); runOnlyForDeploymentPostprocessing = 0; };
+		CCC8ECE80271796AF54350E8 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (4AAA68298FA5E57B81A86BAF,7BB87A1DD03CE2DFAFA930F4); runOnlyForDeploymentPostprocessing = 0; };
+		8A7588AD5FA397C62F95C6FE = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (BBE189F87790362F4781096F,); runOnlyForDeploymentPostprocessing = 0; };
+		681C948D238C526E9E3424E0 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RheaRFSpanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC233BDA2344D97687F5A251 = { isa = PBXGroup; name = App; sourceTree = "<group>"; children = (94FE1748ABDFCEDEE63AD89D,0BE85B198C54688B1AFB5044,BD95C03EFDA8DE0848DB1C15,A2FDA73C38AAEF1A2FFD5180,D15B4C9521FD0E516D551CBC,148B071BCB0DAE222D6EFDDF,06EF0089B8BCA56714CD7478,3AA005BAB8DC9F2DD1BD1BCC,B0E5D18AB35E9BE77584F6F2,9BE394201301D4F72927D500); };
+		679F4E5B46EF53E000AB57E7 = { isa = PBXGroup; name = Config; sourceTree = "<group>"; children = (EE1E752050BF380B88186C3D,EC25158BE6F7AF4B02418E31); };
+		B9E7F2871A3402983868AFC8 = { isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (681C948D238C526E9E3424E0,); };
+		19F479106CE8C3BA8C106518 = { isa = PBXGroup; sourceTree = "<group>"; children = (FC233BDA2344D97687F5A251,679F4E5B46EF53E000AB57E7,B9E7F2871A3402983868AFC8,); };
+		5DF0EAF287A59303D4EFEAF3 = { isa = XCBuildConfiguration; name = Debug; buildSettings = { SDKROOT = iphoneos; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE; CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES; }; };
+		B8EB4DC6EE71CC2FBFD201B8 = { isa = XCBuildConfiguration; name = Debug; baseConfigurationReference = EE1E752050BF380B88186C3D; buildSettings = { SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)"; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; }; };
+		C62D9534737287C44FD6EF43 = { isa = XCBuildConfiguration; name = Release; buildSettings = { SDKROOT = iphoneos; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE; CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES; }; };
+		2EF9ECCD715FED9D8FF379BE = { isa = XCBuildConfiguration; name = Release; baseConfigurationReference = EE1E752050BF380B88186C3D; buildSettings = { SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_COMPILATION_MODE = wholemodule; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; VALIDATE_PRODUCT = YES; }; };
+		7ED5184A5487DF185E3420D0 = { isa = XCConfigurationList; buildConfigurations = (5DF0EAF287A59303D4EFEAF3,C62D9534737287C44FD6EF43); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		82A58AF6F77EDCFC78A65DA6 = { isa = XCConfigurationList; buildConfigurations = (B8EB4DC6EE71CC2FBFD201B8,2EF9ECCD715FED9D8FF379BE); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		C1E9827DB735CA9BAA54A540 = { isa = PBXNativeTarget; buildConfigurationList = 82A58AF6F77EDCFC78A65DA6; buildPhases = (DE62F1BD2E122BBF6BD45B9C,8A7588AD5FA397C62F95C6FE,CCC8ECE80271796AF54350E8,); buildRules = (); dependencies = (); name = RheaRFSpanner; packageProductDependencies = (ED3DC570B697046E1D6DC405,); productName = RheaRFSpanner; productReference = 681C948D238C526E9E3424E0; productType = "com.apple.product-type.application"; };
+		244210E48437B6556980A702 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; }; buildConfigurationList = 7ED5184A5487DF185E3420D0; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,Base,); mainGroup = 19F479106CE8C3BA8C106518; packageReferences = (4C62EC40DF63DF0873D128AE,); productRefGroup = B9E7F2871A3402983868AFC8; projectDirPath = ""; projectRoot = ""; targets = (C1E9827DB735CA9BAA54A540,); };
+	};
+	rootObject = 244210E48437B6556980A702;
+}

@@ -1,0 +1,10 @@
+{
+  "tested_commit": "2b52f3bc10f2c9408a4bbb2e029ee8dc5efa5471",
+  "tested_repository": "timelabs-npo/ai-traces",
+  "source_prefix": "projects/rhea-rf-spanner/",
+  "unchanged_build_inputs_compared_to_uploaded_snapshot": 31,
+  "additional_fixed_metal_file_compared_to_github_commit": true,
+  "metal_blob_sha": "41d482f3777847d34a250d4232fe9b280fb9adf9",
+  "unexpected_build_input_changes": [],
+  "scope": "App, Sources, Tests, Config, scripts, Xcode project, workflow, Package.swift; documentation and validation-record additions are not app-code changes."
+}
