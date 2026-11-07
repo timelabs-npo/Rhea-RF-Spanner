@@ -1,3 +1,4 @@
+import Foundation
 import RheaRFCore
 import SwiftUI
 
@@ -27,7 +28,7 @@ struct ExperimentView: View {
                         VStack(spacing: 16) {
                             topChrome
                             viewport(overlayControls: false)
-                                .frame(height: dynamicTypeSize.isAccessibilitySize ? 390 : 340)
+                                .frame(height: dynamicTypeSize.isAccessibilitySize ? 600 : dynamicTypeSize >= .xxLarge ? 430 : 340)
                             if showControls { controlPanel }
                             consentPanel
                             transport
@@ -178,25 +179,17 @@ struct ExperimentView: View {
 
     private var viewportHeader: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
-                if showReadout { phaseReadout }
-                Spacer(minLength: 0)
-                VStack(alignment: .trailing, spacing: 8) {
-                    presentationSelector
-                    Text(sourceCaption)
-                        .font(.caption2.weight(.semibold))
-                        .tracking(0.6)
-                        .foregroundStyle(accent)
-                        .multilineTextAlignment(.trailing)
-                    Text(model.isRunning ? "● REC  " + clockText : model.isReplaying ? "PLAYBACK" : "STANDBY")
-                        .font(.caption2.monospacedDigit().weight(.medium))
-                        .foregroundStyle(model.isRunning ? Color(red: 1, green: 0.4, blue: 0.3) : .white)
-                    Text("48 kHz · 23.4 fps")
-                        .font(.caption2.monospaced())
-                        .foregroundStyle(.white.opacity(0.65))
+            if dynamicTypeSize >= .xxLarge {
+                VStack(alignment: .leading, spacing: 12) {
+                    viewportStatus
+                    if showReadout { phaseReadout }
                 }
-                .padding(10)
-                .modifier(InstrumentSurface(cornerRadius: 15))
+            } else {
+                HStack(alignment: .top, spacing: 10) {
+                    if showReadout { phaseReadout }
+                    Spacer(minLength: 0)
+                    viewportStatus
+                }
             }
             if let slice = model.latestSlice, !slice.isPhaseCoherent {
                 Label(slice.validity.displayName, systemImage: "waveform.slash")
@@ -208,6 +201,25 @@ struct ExperimentView: View {
         }
     }
 
+    private var viewportStatus: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            presentationSelector
+            Text(sourceCaption)
+                .font(.caption2.weight(.semibold))
+                .tracking(0.6)
+                .foregroundStyle(accent)
+                .multilineTextAlignment(.trailing)
+            Text(model.isRunning ? "● REC  " + clockText : model.isReplaying ? "PLAYBACK" : "STANDBY")
+                .font(.caption2.monospacedDigit().weight(.medium))
+                .foregroundStyle(model.isRunning ? Color(red: 1, green: 0.4, blue: 0.3) : .white)
+            Text("48 kHz · 23.4 fps")
+                .font(.caption2.monospaced())
+                .foregroundStyle(.white.opacity(0.65))
+        }
+        .padding(10)
+        .modifier(InstrumentSurface(cornerRadius: 15))
+    }
+
     private var phaseReadout: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text("RELATIVE PHASE")
@@ -217,6 +229,8 @@ struct ExperimentView: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(phaseText)
                     .font(.title.monospacedDigit().weight(.medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .contentTransition(.identity)
                 Text("rad").font(.caption).foregroundStyle(subdued)
             }
@@ -262,16 +276,25 @@ struct ExperimentView: View {
 
     private var frequencyAxis: some View {
         HStack(spacing: 0) {
-            Text("kHz").frame(width: 36, alignment: .leading)
-            ForEach(18...22, id: \.self) { value in
-                Text(String(value))
-                    .frame(maxWidth: .infinity, alignment: value == 18 ? .leading : value == 22 ? .trailing : .center)
+            Text("kHz").frame(width: 44)
+            GeometryReader { geometry in
+                ZStack(alignment: .topLeading) {
+                    ForEach(18...22, id: \.self) { value in
+                        let x = geometry.size.width * CGFloat(value - 18) / 4
+                        Text(String(value))
+                            .frame(width: 28)
+                            .position(x: min(max(14, x), max(14, geometry.size.width - 14)), y: 10)
+                        Rectangle().fill(subdued.opacity(0.5))
+                            .frame(width: 1, height: 5)
+                            .position(x: x, y: 23)
+                    }
+                }
             }
+            .frame(height: 26)
         }
         .font(.caption2.monospacedDigit())
         .foregroundStyle(subdued)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.vertical, 4)
         .accessibilityLabel("Frequency axis, 18 to 22 kilohertz")
     }
 
@@ -284,12 +307,12 @@ struct ExperimentView: View {
                 .fixedSize()
                 .accessibilityHidden(true)
             Spacer(minLength: 4)
-            Text(historyAgeText)
+            Text(historyAgeText + " s")
         }
         .font(.caption2.monospacedDigit())
         .foregroundStyle(subdued)
         .padding(.vertical, 10)
-        .frame(width: 36)
+        .frame(width: 44)
         .accessibilityLabel("Time axis, newest at top; \(historyAgeText) seconds of history")
     }
 
@@ -309,7 +332,7 @@ struct ExperimentView: View {
     }
 
     private var controlPanel: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             Capsule().fill(.white.opacity(0.35)).frame(width: 34, height: 4)
                 .accessibilityHidden(true)
             HStack {
@@ -357,7 +380,10 @@ struct ExperimentView: View {
                 .accessibilityLabel("Decrease carrier by 500 hertz")
                 Spacer(minLength: 4)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(carrierText).font(.largeTitle.monospacedDigit().weight(.medium))
+                    Text(carrierText)
+                        .font(.largeTitle.monospacedDigit().weight(.medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                     Text("kHz").font(.callout)
                 }
                 .foregroundStyle(accent)
@@ -420,7 +446,7 @@ struct ExperimentView: View {
                     .accessibilityLabel("Display persistence")
                     .accessibilityValue(Int((model.displayParameters.persistence * 100).rounded()).formatted() + " percent")
             }
-            Text("Display only · sample levels and DEMO parameters stay fixed")
+            Text("Display only · recorded levels and simulation settings are unchanged")
                 .font(.caption2)
                 .foregroundStyle(subdued)
         }
@@ -630,8 +656,15 @@ struct ExperimentView: View {
         model.latestSlice?.source == .simulated || (model.latestSlice == nil && model.mode == .demo)
     }
     private var sourceCaption: String {
-        if model.mode == .replay { return "REPLAY · " + model.replaySourceName.uppercased() }
-        return sourceIsSimulated ? "DEMO · SYNTHETIC" : "LIVE · ACOUSTIC"
+        if model.mode == .replay {
+            if model.latestSlice == nil { return "REPLAY · NO CAPTURE" }
+            if model.presentation == .field {
+                return sourceIsSimulated ? "REPLAY · DEMO SYNTHETIC" : "REPLAY · LIVE ABSTRACT"
+            }
+            return "REPLAY · " + model.replaySourceName.uppercased()
+        }
+        if sourceIsSimulated { return "DEMO · SYNTHETIC" }
+        return model.presentation == .field ? "LIVE · ABSTRACT" : "LIVE · ACOUSTIC"
     }
     private var phaseText: String {
         guard let slice = model.latestSlice, slice.isPhaseCoherent, let phase = slice.unwrappedPhase else { return "—" }

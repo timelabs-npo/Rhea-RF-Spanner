@@ -22,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: rhea-rf-spanner-${{ github.ref }}
+  group: rhea-rf-spanner-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -35,6 +35,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Select Xcode 26.3 and identify the project
         shell: bash
         run: |

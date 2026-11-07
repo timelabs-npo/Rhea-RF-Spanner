@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import RheaRFCore
 
-private func record(
+private func makeSliceFixture(
     time: UInt64 = 0, source: ObservationSource = .simulated, phase: Float? = 0,
     validity: PhaseValidity = .valid, epoch: UInt32 = 1,
     position: SIMD3<Float>? = nil, direction: SIMD3<Float>? = nil, depth: Float? = nil
@@ -36,7 +36,7 @@ final class SliceReplayTests: XCTestCase {
     }
 
     func testWireRecordHas64BytesAndIndependentLittleEndianOffsets() throws {
-        let original = record(time: 0x0102_0304_0506_0708, epoch: 0xA1B2_C3D4)
+        let original = makeSliceFixture(time: 0x0102_0304_0506_0708, epoch: 0xA1B2_C3D4)
         let data = original.encoded()
         XCTAssertEqual(data.count, 64)
         XCTAssertEqual(Array(data[0..<8]), [8, 7, 6, 5, 4, 3, 2, 1])
@@ -47,18 +47,18 @@ final class SliceReplayTests: XCTestCase {
     }
 
     func testMissingSpatialValuesAndMeasuredOriginRemainDistinct() throws {
-        let missing = try SpatioTemporalSlice(encoded: record().encoded())
+        let missing = try SpatioTemporalSlice(encoded: makeSliceFixture().encoded())
         XCTAssertNil(missing.sensorPosition)
         XCTAssertNil(missing.sensorForward)
         XCTAssertNil(missing.lidarDepthMeters)
-        let located = record(position: .zero, direction: SIMD3(0, 0, -1), depth: 2.5)
+        let located = makeSliceFixture(position: .zero, direction: SIMD3(0, 0, -1), depth: 2.5)
         XCTAssertEqual(try SpatioTemporalSlice(encoded: located.encoded()), located)
         XCTAssertNotEqual(located.encoded(), missing.encoded())
     }
 
     func testInvalidPhaseIsUnavailableAndNotAZeroMeasurement() throws {
         for validity in [PhaseValidity.lowSignal, .lowQuality, .inputDiscontinuity, .nonFiniteInput] {
-            let original = record(phase: nil, validity: validity)
+            let original = makeSliceFixture(phase: nil, validity: validity)
             let decoded = try SpatioTemporalSlice(encoded: original.encoded())
             XCTAssertNil(decoded.unwrappedPhase)
             XCTAssertFalse(decoded.isPhaseCoherent)
@@ -67,20 +67,20 @@ final class SliceReplayTests: XCTestCase {
     }
 
     func testDecoderRejectsVersionReservedFlagsAndNonfinitePayload() {
-        var data = record().encoded()
+        var data = makeSliceFixture().encoded()
         data[63] = 2
         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data)) {
             XCTAssertEqual($0 as? SliceDecodingError, .unsupportedVersion(2))
         }
-        data = record().encoded()
+        data = makeSliceFixture().encoded()
         data[61] |= 4
         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data)) {
             XCTAssertEqual($0 as? SliceDecodingError, .reservedFlags)
         }
-        data = record().encoded()
+        data = makeSliceFixture().encoded()
         data.replaceSubrange(12..<16, with: [0, 0, 0xC0, 0x7F]) // Float32 quiet NaN.
         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
-        data = record().encoded()
+        data = makeSliceFixture().encoded()
         data[61] &= 0xFD // Valid record cannot declare its phase absent.
         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: data))
         XCTAssertThrowsError(try SpatioTemporalSlice(encoded: Data(repeating: 0, count: 63)))
@@ -90,7 +90,7 @@ final class SliceReplayTests: XCTestCase {
         let tape = ReplayTape(capacity: 3)
         for time in 0..<5 {
             tape.append(
-                record(time: UInt64(time), source: time % 2 == 0 ? .microphone : .simulated),
+                makeSliceFixture(time: UInt64(time), source: time % 2 == 0 ? .microphone : .simulated),
                 spectrum: SpectrumFrame(
                     sampleTimestamp: UInt64(time), frequenciesHz: [20_500], magnitudesDBFS: [-20]
                 )
@@ -112,13 +112,13 @@ final class SliceReplayTests: XCTestCase {
         XCTAssertEqual(tape.count, 0)
         XCTAssertNil(tape.spectrum(at: 0))
         XCTAssertTrue(tape.encodedFrames().isEmpty)
-        tape.append(record(time: 9))
+        tape.append(makeSliceFixture(time: 9))
         XCTAssertEqual(tape.slice(at: 0)?.sampleTimestamp, 9)
     }
 
     func testDefaultTapeKeepsExactly2048WireRecords() {
         let tape = ReplayTape()
-        for index in 0..<2_051 { tape.append(record(time: UInt64(index))) }
+        for index in 0..<2_051 { tape.append(makeSliceFixture(time: UInt64(index))) }
         XCTAssertEqual(tape.capacity, 2_048)
         XCTAssertEqual(tape.count, 2_048)
         XCTAssertEqual(tape.encodedFrames().count, 131_072)
