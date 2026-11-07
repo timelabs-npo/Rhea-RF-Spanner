@@ -68,8 +68,9 @@ def main() -> None:
     target_configs: list[str] = []
     for name in ("Debug", "Release"):
         debug = name == "Debug"
+        active_arch = "YES" if debug else "NO"
         project_configs.append(add("project-config:" + name,
-            f'isa = XCBuildConfiguration; name = {name}; buildSettings = {{ SDKROOT = iphoneos; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE; CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES; }};'))
+            f'isa = XCBuildConfiguration; name = {name}; buildSettings = {{ SDKROOT = iphoneos; ONLY_ACTIVE_ARCH = {active_arch}; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE; CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES; }};'))
         settings = 'SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)"; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES;' if debug else 'SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_COMPILATION_MODE = wholemodule; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; VALIDATE_PRODUCT = YES;'
         target_configs.append(add("target-config:" + name,
             f'isa = XCBuildConfiguration; name = {name}; baseConfigurationReference = {file_refs["Config/Project.xcconfig"]}; buildSettings = {{ {settings} }};'))

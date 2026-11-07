@@ -259,6 +259,8 @@ struct ExperimentView: View {
         Button { model.presentation = presentation } label: {
             Text(title)
                 .font(.caption2.weight(.semibold))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .foregroundStyle(model.presentation == presentation ? Color.black : .white)
                 .padding(.horizontal, 7)
                 .frame(minHeight: 34)

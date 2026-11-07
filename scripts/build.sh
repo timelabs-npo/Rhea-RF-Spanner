@@ -23,7 +23,7 @@ case "$mode" in
       xcodebuild -project RheaRFSpanner.xcodeproj -scheme RheaRFSpanner \
         -configuration Debug -destination 'generic/platform=iOS Simulator' \
         -derivedDataPath build/DerivedData-simulator \
-        CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build/logs/xcode-simulator.log
+        CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build 2>&1 | tee build/logs/xcode-simulator.log
     fi
     if [ "$mode" = device ] || [ "$mode" = all ]; then
       xcodebuild -project RheaRFSpanner.xcodeproj -scheme RheaRFSpanner \

@@ -7,6 +7,7 @@ performance. Runtime absence is a failure rather than a fabricated preview.
 from __future__ import annotations
 
 import json
+import platform
 import subprocess
 import time
 from pathlib import Path
@@ -65,9 +66,12 @@ def main() -> None:
     (OUTPUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     test_output = ROOT / "build/test-results"
     test_output.mkdir(parents=True, exist_ok=True)
+    architecture = platform.machine()
+    if architecture not in {"arm64", "x86_64"}:
+        raise RuntimeError(f"Unsupported Simulator host architecture: {architecture}")
     command = [
         "xcodebuild", "-project", "RheaRFSpanner.xcodeproj", "-scheme", "RheaRFSpanner",
-        "-configuration", "Debug", "-destination", f"platform=iOS Simulator,id={udid}",
+        "-configuration", "Debug", "-destination", f"platform=iOS Simulator,id={udid},arch={architecture}",
         "-derivedDataPath", "build/DerivedData-simulator",
         "-resultBundlePath", "build/test-results/ObservatorySession.xcresult",
         "-only-testing:RheaRFSpannerTests", "CODE_SIGNING_ALLOWED=NO", "test",
