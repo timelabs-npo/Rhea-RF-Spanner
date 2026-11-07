@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "repository": "timelabs-npo/Rhea-RF-Spanner",
+  "run_id": 42416851915,
+  "run_url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42416851915",
+  "status": "completed",
+  "conclusion": "success",
+  "source_commit": "a93da56e45726d84e27f567c323eeda45b17d7d4",
+  "event": "pull_request",
+  "run_attempt": 1,
+  "created_at_utc": "2026-11-07T21:38:55Z",
+  "updated_at_utc": "2026-11-07T21:49:20Z",
+  "job": {
+    "id": 128536705958,
+    "name": "Swift core and unsigned iOS app",
+    "status": "completed",
+    "conclusion": "success",
+    "started_at_utc": "2026-11-07T21:38:58Z",
+    "completed_at_utc": "2026-11-07T21:49:19Z",
+    "runner_labels": [
+      "macos-15"
+    ],
+    "runner_name": "GitHub Actions 1000003032",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-07T21:38:59Z",
+        "completed_at": "2026-11-07T21:38:59Z"
+      },
+      {
+        "name": "Check out this exact commit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-07T21:38:59Z",
+        "completed_at": "2026-11-07T21:39:02Z"
+      },
+      {
+        "name": "Select Xcode 26.3 and identify the project",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-07T21:39:02Z",
+        "completed_at": "2026-11-07T21:39:02Z"
+      },
+      {
+        "name": "Verify installed distribution tooling without credentials",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-07T21:39:02Z",
+        "completed_at": "2026-11-07T21:39:09Z"
+      },
+      {
+        "name": "Compile and run the Swift core tests",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-07T21:39:09Z",
+        "completed_at": "2026-11-07T21:39:45Z"
+      },
+      {
+        "name": "Compile the iOS Simulator app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-07T21:39:45Z",
+        "completed_at": "2026-11-07T21:41:49Z"
+      },
+      {
+        "name": "Compile the unsigned iOS device app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-07T21:41:49Z",
+        "completed_at": "2026-11-07T21:42:42Z"
+      },
+      {
+        "name": "Launch silent DEMO and capture the native interface",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-07T21:42:42Z",
+        "completed_at": "2026-11-07T21:48:53Z"
+      },
+      {
+        "name": "Preserve compiler and test logs",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-07T21:48:53Z",
+        "completed_at": "2026-11-07T21:48:55Z"
+      },
+      {
+        "name": "Post Check out this exact commit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-11-07T21:48:55Z",
+        "completed_at": "2026-11-07T21:48:56Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-11-07T21:48:56Z",
+        "completed_at": "2026-11-07T21:49:17Z"
+      }
+    ]
+  },
+  "toolchain": {
+    "xcode": "26.3",
+    "xcode_build": "17C529",
+    "swift": "6.2.4",
+    "ios_sdk": "26.2",
+    "deployment_target": "18.0",
+    "runner_image": "macos-15-arm64"
+  },
+  "results": {
+    "release_core_build": "passed",
+    "core_tests": {
+      "executed": 41,
+      "failures": 0
+    },
+    "simulator_debug_build": "passed",
+    "unsigned_ios_release_build": "passed",
+    "simulator_hosted_tests": {
+      "executed": 5,
+      "failures": 0,
+      "renderer": 3,
+      "session": 2
+    },
+    "distribution_tooling_preflight": "passed_without_credentials",
+    "simulator": "iPhone 17 Pro",
+    "native_captures": [
+      "01-idle.png",
+      "02-demo-field.png",
+      "03-demo-waterfall.png"
+    ]
+  },
+  "artifact": {
+    "id": 13591348672,
+    "name": "rhea-rf-spanner-build-4c16ad3a4c3ce37f635bca9e34b42e370e184661",
+    "size_in_bytes": 2848740,
+    "sha256": "1af364086ae1c5b344b2ac6bbeee7620e29d96dad173fa83f6a4279f6c51b6b3",
+    "created_at_utc": "2026-11-07T21:48:55Z",
+    "expires_at_utc": "2026-11-14T21:48:54Z",
+    "run_url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42416851915/artifacts/13591348672"
+  },
+  "later_workflow_only_commit": {
+    "sha": "cbc9d5750bf50d0f26be2b10703a5f21fececb4c",
+    "compare_url": "https://github.com/timelabs-npo/Rhea-RF-Spanner/compare/a93da56e45726d84e27f567c323eeda45b17d7d4...cbc9d5750bf50d0f26be2b10703a5f21fececb4c",
+    "files": [
+      {
+        "path": ".github/workflows/testflight.yml",
+        "status": "modified",
+        "changes": 7
+      }
+    ],
+    "scope": "Only the manual TestFlight workflow changed; this is not a signing-workflow execution."
+  },
+  "limitations": [
+    "No signing identity/profile/API key was used in this run.",
+    "No signed archive or IPA was exported.",
+    "No Apple validation or TestFlight upload was performed.",
+    "Simulator DEMO tests do not establish speaker/microphone performance or physical-device behavior."
+  ]
+}

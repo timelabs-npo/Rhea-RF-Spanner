@@ -1,0 +1,13 @@
+{
+  "macos/simulator-capture.log": "9f1d9ac557af5cb4d5fed53ccfdc23b03d4ad7eb732c3779620ebd11bec6b88c",
+  "macos/source-checkout-excerpt.log": "c312985743107978eaef7f70f5b825035e30f3ef6b63795ddff3f871883b442c",
+  "macos/swift-build-release.log": "ab0c2ab2aa70f6f64b3c526a059a458f72fa9e0f960f638be9730b081df95c8f",
+  "macos/swift-test.log": "e6d84d39071cbf050a8f5dfb7f5601e1c40a99cf807c7104bdc9fb3c600b1c67",
+  "macos/swift-version.txt": "068bbf5a239131acb3231a0fa67c33dc6fd5e8d3c34d56e89bea559f52751b66",
+  "macos/testflight-preflight.log": "93e5f5466b619819042b8e17a6a7e0218bf51851822a178b677737ce01b931b0",
+  "macos/xcode-device-unsigned.log": "2b010d4d51d06eb683bc43605d67f742ef1f678e57b33ea2d7b6f637f5961a85",
+  "macos/xcode-session-tests.log": "e8e571d6cf931f60d4b5764fbb3e852168e24a307951641168d225ba46d83992",
+  "macos/xcode-simulator.log": "6c89409425407e8f580377aeabd93e75c2a45cf13f8e7cd32a9fa311b2f3c282",
+  "macos/xcode-version.txt": "bb7fc9a8f5e063e81975b33054b3a526c91bcccff263ad11d5bd8bcdbe8f0973",
+  "run-summary.json": "5dc4b65058df879bac5572a2850859eb475f59e3232ab1b8ea5cd39aa012746a"
+}

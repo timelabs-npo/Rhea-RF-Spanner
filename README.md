@@ -20,18 +20,21 @@ False color does not imply thermal sensing.
 
 ## Build and validation status
 
-**Observatory CI passed:** the release signal core compiled, all **41 core
-tests** and **2 Simulator-hosted session tests** passed, and the iOS Simulator
+**Latest native CI passed:** the release signal core compiled, all **41 core
+tests** and **5 Simulator-hosted application tests** passed, and the iOS Simulator
 Debug and unsigned iOS device Release apps built successfully with Xcode 26.3.
+The hosted suite includes three renderer regressions for replaced spectra,
+compressed capture gaps, and contiguous history, plus two session lifecycle tests.
 The compiled app launched in an iPhone 17 Pro Simulator and produced actual
 idle, DEMO Field, and DEMO Waterfall screenshots.
-See [the successful GitHub Actions run](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42413050294),
-which tested source commit `6c706d6ab1c374e8bb2d5b1214d6bb13418bf6ee`.
-That evidence snapshot changed documentation and captures only; its 43 build
-inputs match the tested commit. The subsequent distribution-preparation change
-also fixes Waterfall replacement/gap handling and adds three renderer regression
-tests; its native CI result is recorded separately when available.
-Full logs, test scope, and screenshots are retained in
+See [GitHub Actions run 42416851915](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42416851915),
+which tested source commit `a93da56e45726d84e27f567c323eeda45b17d7d4`.
+The same run passed a credential-free check of the installed Xcode export and
+`altool` interfaces. It did not sign or upload an app.
+
+Logs, exact test scope, and the subsequent workflow-only correction are recorded in
+[docs/TESTFLIGHT_PREPARATION_VALIDATION.md](docs/TESTFLIGHT_PREPARATION_VALIDATION.md).
+The earlier Observatory run and retained native screenshots remain documented in
 [docs/OBSERVATORY_VALIDATION.md](docs/OBSERVATORY_VALIDATION.md).
 Physical-iPhone acoustic validation, signing, and TestFlight delivery remain
 separate release steps.
