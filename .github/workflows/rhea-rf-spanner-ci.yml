@@ -2,7 +2,7 @@ name: Rhea RF Spanner — compile and test
 
 on:
   push:
-    branches: [main, rhea-rf-spanner/bootstrap-2026-11-07, feature/observatory-v2-20261107]
+    branches: [main, rhea-rf-spanner/bootstrap-2026-11-07]
     paths:
       - 'App/**'
       - 'AppTests/**'

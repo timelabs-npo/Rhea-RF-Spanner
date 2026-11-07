@@ -471,7 +471,7 @@ struct ExperimentView: View {
         VStack(alignment: .leading, spacing: 8) {
             readoutRow("Phase-derived model", value: model.phaseDerivedDisplacementMillimeters.map { number($0, places: 2) + " mm" } ?? "Unavailable")
             readoutRow("Tone / residual", value: qualityText + " dB")
-            readoutRow("Carrier amplitude", value: model.latestSlice.map { number(Double($0.normalizedAmplitude), places: 5) } ?? "—")
+            readoutRow("Carrier amplitude", value: amplitudeText)
             readoutRow("Pose / depth", value: "Unavailable")
             Text(model.referenceMessage)
                 .font(.caption2)
@@ -670,7 +670,14 @@ struct ExperimentView: View {
         guard let slice = model.latestSlice, slice.isPhaseCoherent, let phase = slice.unwrappedPhase else { return "—" }
         return signed(phase, places: 2)
     }
-    private var qualityText: String { model.latestSlice.map { number(Double($0.coherenceSNR), places: 1) } ?? "—" }
+    private var qualityText: String {
+        guard let slice = model.latestSlice, slice.validity != .nonFiniteInput else { return "—" }
+        return number(Double(slice.coherenceSNR), places: 1)
+    }
+    private var amplitudeText: String {
+        guard let slice = model.latestSlice, slice.validity != .nonFiniteInput else { return "Unavailable" }
+        return number(Double(slice.normalizedAmplitude), places: 5)
+    }
     private var carrierText: String { number(Double(model.displayedCarrierFrequencyHz) / 1_000, places: 1) }
     private var clockText: String {
         let seconds = Int(max(0, model.elapsedSeconds))

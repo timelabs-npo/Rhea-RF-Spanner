@@ -58,7 +58,8 @@ not observations or medical measurements. There is no audio output.
 Displacement modulates carrier phase on every sample. Carrier addressing is
 bounded, and the motion phase is bounded independently of total elapsed time.
 Seeded timestamp-addressed noise makes sample generation reproducible across
-callback chunk boundaries. Noise is scaled by RMS, so expected noise power
+callback chunk boundaries. A generation range must not cross UInt64.max; a new
+generator/session is required after clock wrap. Noise is scaled by RMS, so expected noise power
 matches the configured synthetic SNR; finite analysis windows fluctuate.
 Samples are not clipped. The model is separate from renderer gain/persistence.
 
@@ -83,7 +84,10 @@ record's `qualityScore` is a display heuristic derived from the fit gate.
 
 All multibyte values are little-endian. Float fields use IEEE-754 binary32.
 The encoding is independent of Swift object layout and SIMD3 padding. Fitting
-still uses Double internally; conversion to this compact record is lossy.
+still uses Double internally; conversion to this compact record is lossy. Values
+that cannot be represented as finite binary32 invalidate the record rather than
+being saturated or crashing Replay. The nonfinite/unrepresentable validity code
+then marks unavailable phase and neutral finite payloads.
 
 | Byte offset | Length | Value |
 | --- | ---: | --- |
