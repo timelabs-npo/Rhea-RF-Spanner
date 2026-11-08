@@ -27,8 +27,12 @@ statistics alone cannot establish microphone operation or a physical failure.
 ## Events and ownership
 
 `DiagnosticEvent` sanitizes negative or nonfinite elapsed seconds to zero. Its
-category/code are limited to 64 Swift Characters each and message to 512, on
-construction and decoding. These are character limits, not byte limits. Normal
+category/code are limited to 64 Swift Characters and 1,024 UTF-8 bytes each;
+message is limited to 512 Characters and 8,192 UTF-8 bytes, on construction and
+decoding. The byte prefix is bounded before grapheme processing, and an
+incomplete trailing scalar is dropped. This matters because one Character may
+contain arbitrarily many combining marks. Retained text is at most 10,240 UTF-8
+bytes per event, plus ordinary object/storage overhead. Normal
 Codable round trips preserve valid events. Sequence controls ordering; timestamps
 are caller-supplied elapsed durations, never a wall clock.
 
@@ -79,21 +83,29 @@ Contradictory counters (processing without input) follow the no-input rule.
 
 ## Validation and session status
 
-Status: bounded implementation complete; 20 XCTest methods authored, none run.
-This document is the on-disk status report for the coordinator. Source and test
-math/state contracts received an independent read-only review, with no evident
-blocker found. Git diffs were inspected; only the three assigned new paths were
-changed. No existing files were edited and no commit or publication was made.
+The initial WD implementation authored 20 XCTest methods and three new files.
+That session did not compile them or publish a commit. Its toolchain limitation
+is recorded below. Subsequent integration was published as candidate
+`ca4442415728cbf4f3e1721b8b1e5015a0cebc57` in
+[PR #3](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/3).
+The [first native run](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42435212237)
+has passed core tests, Simulator/device compilation, native visual capture,
+and Simulator-hosted tests for that initial candidate.
+
+An independent review then found the pathological Unicode byte-bound issue.
+The corrected implementation and two new regression methods are now present;
+their native validation is pending the final candidate run. Do not transfer an
+earlier commit's pass to this amended source without executing that gate.
 
 The package declares Swift tools 6.0 and Swift language mode 6, and uses XCTest.
 Windows PATH did not expose swift/swiftc; Ubuntu WSL did not expose a runnable
 swift command. The actual attempt to run `swift test --filter DiagnosticsTests`
 from the repository root via Ubuntu WSL stopped at `sh: 1: swift: Permission denied`
-(launcher exit 1), before compilation or test discovery. Thus tests are NOT RUN,
-with no PASS claim. Full debug/release tests were not attempted after that failure.
-Swift 6 compilation, XCTest type checking, and runtime behavior remain unverified;
-source review cannot establish compiler acceptance. No iOS SDK/device validation
-has occurred, and the reported device symptom remains unknown.
+(launcher exit 1), before compilation or test discovery. Thus no tests ran on
+WD. Full debug/release tests were not attempted there after that failure.
+Native CI is the separate compilation/runtime evidence described above. No
+physical-device measurement has been validated by these software checks, and
+the reported device symptom remains unidentified.
 
 Run from the repository root with an installed Swift 6 toolchain:
 
@@ -107,5 +119,5 @@ The targeted suite covers finite-only numerical results, silence, signed zero,
 nonzero samples, nonfinite and empty inputs, JSON safety, text bounds, bounded
 ring overwrite/order/drop/clear behavior, and deterministic pipeline transitions.
 UInt64 counter exhaustion is guarded in source; public-API tests do not attempt
-an impractical UInt64.max appends. Compiler and runtime acceptance remain pending
-until the commands above run in a suitable environment.
+an impractical UInt64.max appends. Record compiler and runtime acceptance against
+the exact commit and run, including the later Unicode-bound correction.

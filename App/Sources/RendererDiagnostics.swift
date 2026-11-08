@@ -164,16 +164,40 @@ final class RendererDiagnostics {
     }
 
     /// Called on the main actor after inspecting the actual command buffer's
-    /// terminal status. Primitive error metadata alone crosses the actor hop.
-    func recordCompletion(succeeded: Bool, errorDomain: String? = nil, errorCode: Int? = nil) {
+    /// terminal status. Production passes the monotonic time captured inside
+    /// the completion callback, before the actor hop. This private timestamp is
+    /// immediately reduced to an elapsed bucket and never enters a snapshot.
+    /// Omitting it preserves synchronous/injected-clock callers.
+    func recordCompletion(
+        succeeded: Bool, completedAt: TimeInterval? = nil,
+        errorDomain: String? = nil, errorCode: Int? = nil
+    ) {
         guard succeeded else {
             Self.increment(&state.failedFrames)
             recordFailure(.gpuExecutionFailed, domain: errorDomain, code: errorCode)
             return
         }
         Self.increment(&state.completedFrames)
-        let epoch = bucketEpoch(for: elapsedNow())
+        let handledElapsed = elapsedNow()
+        let completionElapsed: TimeInterval
+        if let completedAt {
+            completionElapsed = completedAt - origin
+            // Count the terminal status even when timing is unusable, but do
+            // not turn an invalid/future timestamp into a recent completion.
+            guard completedAt.isFinite, completionElapsed.isFinite,
+                  completionElapsed >= 0, completionElapsed <= handledElapsed else { return }
+        } else {
+            completionElapsed = handledElapsed
+        }
+        let currentEpoch = bucketEpoch(for: handledElapsed)
+        let epoch = bucketEpoch(for: completionElapsed)
+        let oldestEpoch = max(0, currentEpoch - Int64(Self.bucketCount - 1))
+        // A stalled main actor may receive an already expired callback. Its
+        // lifetime count survives, but it must not look like fresh GPU work or
+        // overwrite a newer bucket that reuses the same circular slot.
+        guard epoch >= oldestEpoch, epoch <= currentEpoch else { return }
         let slot = Int(epoch % Int64(Self.bucketCount))
+        guard bucketEpochs[slot] <= epoch else { return }
         if bucketEpochs[slot] != epoch {
             bucketEpochs[slot] = epoch
             bucketCompletions[slot] = 0

@@ -484,6 +484,9 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         let semaphore = inFlightFrames
         let diagnostics = diagnostics
         commandBuffer.addCompletedHandler { [weak self, diagnostics] buffer in
+            // Capture callback time here. Waiting for MainActor can be long;
+            // accounting at delivery time would fabricate a recent GPU burst.
+            let completedAt = ProcessInfo.processInfo.systemUptime
             semaphore.signal()
             let succeeded = buffer.status == .completed
             let systemError = buffer.error as NSError?
@@ -491,7 +494,8 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
             let errorCode = systemError?.code
             Task { @MainActor [weak self] in
                 diagnostics.recordCompletion(
-                    succeeded: succeeded, errorDomain: errorDomain, errorCode: errorCode
+                    succeeded: succeeded, completedAt: completedAt,
+                    errorDomain: errorDomain, errorCode: errorCode
                 )
                 guard let self, self.redrawPending else { return }
                 self.redrawPending = false

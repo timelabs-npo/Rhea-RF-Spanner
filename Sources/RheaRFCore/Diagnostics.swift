@@ -62,6 +62,10 @@ public struct SignalBlockStatistics: Sendable, Codable, Equatable {
 
 /// Bounded diagnostic text. Callers must supply non-sensitive summaries only;
 /// truncation is not privacy redaction. Sequence defines order, not elapsed time.
+/// Category/code retain at most 64 Characters and 1,024 UTF-8 bytes each;
+/// message retains at most 512 Characters and 8,192 UTF-8 bytes. The byte cap
+/// is applied first, so a very long combining-mark cluster cannot bypass the
+/// memory bound or make Character segmentation scan the whole input.
 public struct DiagnosticEvent: Sendable, Codable, Equatable {
     public let sequence: UInt64
     public let elapsedSeconds: Double
@@ -78,9 +82,30 @@ public struct DiagnosticEvent: Sendable, Codable, Equatable {
     ) {
         self.sequence = sequence
         self.elapsedSeconds = elapsedSeconds.isFinite && elapsedSeconds >= 0 ? elapsedSeconds : 0
-        self.category = String(category.prefix(64))
-        self.code = String(code.prefix(64))
-        self.message = String(message.prefix(512))
+        self.category = Self.boundedText(category, characterLimit: 64, byteLimit: 1_024)
+        self.code = Self.boundedText(code, characterLimit: 64, byteLimit: 1_024)
+        self.message = Self.boundedText(message, characterLimit: 512, byteLimit: 8_192)
+    }
+
+    private static func boundedText(_ text: String, characterLimit: Int, byteLimit: Int) -> String {
+        // Copy only a bounded UTF-8 prefix. In particular, do not first call
+        // prefix(characterLimit): one Character can contain unbounded scalars.
+        let bytes = Array(text.utf8.prefix(byteLimit))
+        var end = bytes.count
+        if end > 0 {
+            // A Swift String is valid UTF-8. Only the final scalar can have
+            // been cut by the byte prefix; drop it rather than insert U+FFFD,
+            // whose encoding could exceed the promised byte limit.
+            var scalarStart = end - 1
+            while scalarStart > 0, bytes[scalarStart] & 0xC0 == 0x80 {
+                scalarStart -= 1
+            }
+            let lead = bytes[scalarStart]
+            let scalarLength = lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4
+            if end - scalarStart < scalarLength { end = scalarStart }
+        }
+        let bounded = String(decoding: bytes[..<end], as: UTF8.self)
+        return String(bounded.prefix(characterLimit))
     }
 
     private enum CodingKeys: String, CodingKey {

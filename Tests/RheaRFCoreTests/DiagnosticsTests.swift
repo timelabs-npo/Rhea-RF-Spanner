@@ -156,6 +156,60 @@ final class DiagnosticsTests: XCTestCase {
         }
     }
 
+    func testPathologicalCombiningClusterCannotBypassRetainedUTF8Limits() throws {
+        // This entire string is one extended grapheme cluster. A Character
+        // count limit alone would retain all 200,001 input bytes per field.
+        let oversized = "e" + String(repeating: "\u{301}", count: 100_000)
+        var log = BoundedDiagnosticLog(capacity: 1)
+        log.append(elapsedSeconds: 0, category: oversized, code: oversized, message: oversized)
+        let event = try XCTUnwrap(log.events.first)
+        let smallPrefix = "e" + String(repeating: "\u{301}", count: 511)
+        let messagePrefix = "e" + String(repeating: "\u{301}", count: 4_095)
+        XCTAssertEqual(event.category, smallPrefix)
+        XCTAssertEqual(event.code, smallPrefix)
+        XCTAssertEqual(event.message, messagePrefix)
+        XCTAssertEqual(event.category.utf8.count, 1_023)
+        XCTAssertEqual(event.code.utf8.count, 1_023)
+        XCTAssertEqual(event.message.utf8.count, 8_191)
+        XCTAssertEqual(event.message.count, 1)
+
+        // Deserialization must apply the same byte cap, even though the JSON
+        // decoder itself necessarily receives the complete external payload.
+        let encoded = try JSONSerialization.data(withJSONObject: [
+            "sequence": 1, "elapsedSeconds": 0,
+            "category": oversized, "code": oversized, "message": oversized
+        ])
+        let decoded = try JSONDecoder().decode(DiagnosticEvent.self, from: encoded)
+        XCTAssertEqual(decoded, event)
+        XCTAssertNoThrow(try JSONEncoder().encode(decoded))
+    }
+
+    func testUTF8CapDropsIncompleteScalarsWithoutReplacementOrOversizedOutput() {
+        let cases: [(String, String)] = [
+            ("e" + String(repeating: "\u{301}", count: 511), "é"),
+            ("e" + String(repeating: "\u{301}", count: 511), "\u{20DD}"),
+            ("e" + String(repeating: "\u{301}", count: 511), "🧪"),
+            ("é" + String(repeating: "\u{301}", count: 510), "🧪"),
+            ("€" + String(repeating: "\u{301}", count: 509), "🧪"),
+        ]
+        for (prefix, suffix) in cases {
+            let event = DiagnosticEvent(
+                sequence: 1, elapsedSeconds: 0, category: prefix + suffix,
+                code: "bounded", message: "Observed"
+            )
+            XCTAssertEqual(event.category, prefix)
+            XCTAssertLessThanOrEqual(event.category.utf8.count, 1_024)
+            XCTAssertFalse(event.category.unicodeScalars.contains { $0.value == 0xFFFD })
+        }
+        let exactBoundary = "é" + String(repeating: "\u{301}", count: 511)
+        let event = DiagnosticEvent(
+            sequence: 1, elapsedSeconds: 0, category: exactBoundary,
+            code: "bounded", message: "Observed"
+        )
+        XCTAssertEqual(event.category, exactBoundary)
+        XCTAssertEqual(event.category.utf8.count, 1_024)
+    }
+
     func testRingOverwritesOldestAcrossRepeatedWrapsAndCountsDrops() throws {
         var log = BoundedDiagnosticLog(capacity: 3)
         XCTAssertTrue(log.events.isEmpty)

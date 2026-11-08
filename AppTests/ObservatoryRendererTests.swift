@@ -192,4 +192,57 @@ final class ObservatoryRendererTests: XCTestCase {
         clock = .infinity
         XCTAssertNoThrow(try JSONEncoder().encode(diagnostics.snapshot()))
     }
+
+    func testDelayedActorDeliveryDoesNotMakeAnExpiredCompletionRecent() throws {
+        var clock: TimeInterval = 500
+        let diagnostics = RendererDiagnostics(clock: { clock })
+        // Metal completed at t=500; MainActor could only handle it at t=503.
+        clock = 503
+        diagnostics.recordCompletion(succeeded: true, completedAt: 500)
+        let snapshot = diagnostics.snapshot()
+        XCTAssertEqual(snapshot.completedFrames, 1)
+        XCTAssertEqual(snapshot.completedFramesInWindow, 0)
+        XCTAssertEqual(snapshot.measuredCompletedFramesPerSecond, 0)
+        let data = try JSONEncoder().encode(snapshot)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertNil(json["completedAt"])
+        XCTAssertNil(json["origin"])
+        XCTAssertNil(json["systemUptime"])
+    }
+
+    func testOutOfOrderCompletionCannotOverwriteANewerCircularBucket() {
+        var clock: TimeInterval = 500
+        let diagnostics = RendererDiagnostics(clock: { clock })
+        clock = 503
+        diagnostics.recordCompletion(succeeded: true, completedAt: 502.5)
+        // t=500.5 and t=502.5 map to the same slot, two seconds apart. An
+        // expired callback delivered later must preserve the recent count.
+        diagnostics.recordCompletion(succeeded: true, completedAt: 500.5)
+        diagnostics.recordCompletion(succeeded: true, completedAt: 502)
+        let snapshot = diagnostics.snapshot()
+        XCTAssertEqual(snapshot.completedFrames, 3)
+        XCTAssertEqual(snapshot.completedFramesInWindow, 2)
+        XCTAssertEqual(snapshot.measuredCompletedFramesPerSecond,
+                       2 / snapshot.frameRateWindowSeconds, accuracy: 1e-9)
+        // Both actual completions have expired even though their main-actor
+        // delivery at t=503 would still be within the current rolling window.
+        clock = 504.5
+        XCTAssertEqual(diagnostics.snapshot().completedFramesInWindow, 0)
+        XCTAssertEqual(diagnostics.snapshot().completedFrames, 3)
+    }
+
+    func testInvalidCompletionTimesAffectLifetimeOnly() throws {
+        var clock: TimeInterval = 500
+        let diagnostics = RendererDiagnostics(clock: { clock })
+        clock = 503
+        let invalidTimes: [TimeInterval] = [.nan, .infinity, -.infinity, 499, 504]
+        for completionTime in invalidTimes {
+            diagnostics.recordCompletion(succeeded: true, completedAt: completionTime)
+        }
+        let snapshot = diagnostics.snapshot()
+        XCTAssertEqual(snapshot.completedFrames, 5)
+        XCTAssertEqual(snapshot.completedFramesInWindow, 0)
+        XCTAssertEqual(snapshot.measuredCompletedFramesPerSecond, 0)
+        XCTAssertNoThrow(try JSONEncoder().encode(snapshot))
+    }
 }
