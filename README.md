@@ -1,5 +1,12 @@
 # Rhea RF Spanner
 
+> **Spatial development branch:** this branch also compiles an unwired G2a
+> camera/AR/depth module for review. It adds no camera start control to the
+> ordinary app and is not the source selected for TestFlight 0.2.2 (4).
+> Follow [spatial validation](docs/SPATIAL_CONTEXT_VALIDATION.md) and the
+> [first external-probe gate](docs/project/EXTERNAL_PROBE_GATE.md) separately
+> from the G1 release evidence below.
+
 An inspectable iOS application for **passive audio analysis and acoustic phase
 experiments** using an iPhone's built-in microphone and, for an explicitly
 selected tone experiment, its speaker. The display name is **Rhea RF Spanner**;
