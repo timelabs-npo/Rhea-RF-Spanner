@@ -6,9 +6,18 @@ import Darwin
 import Foundation
 import Vision
 
+/// Vision coordinates are normalized to the image, with a lower-left origin.
+private struct ObservationBounds: Encodable {
+    let x: Double
+    let y: Double
+    let width: Double
+    let height: Double
+}
+
 private struct RecognizedLine: Encodable {
     let text: String
     let confidence: Float
+    let boundingBox: ObservationBounds
 }
 
 private struct ScreenText: Encodable {
@@ -33,7 +42,14 @@ private enum CaptureScreenText {
             try handler.perform([request])
             let lines = (request.results ?? []).compactMap { observation -> RecognizedLine? in
                 guard let candidate = observation.topCandidates(1).first else { return nil }
-                return RecognizedLine(text: candidate.string, confidence: candidate.confidence)
+                let bounds = observation.boundingBox
+                return RecognizedLine(
+                    text: candidate.string, confidence: candidate.confidence,
+                    boundingBox: ObservationBounds(
+                        x: Double(bounds.origin.x), y: Double(bounds.origin.y),
+                        width: Double(bounds.width), height: Double(bounds.height)
+                    )
+                )
             }
             let output = ScreenText(engine: "Apple Vision VNRecognizeTextRequest",
                                     revision: Int(request.revision), lines: lines)
