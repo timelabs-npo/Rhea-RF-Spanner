@@ -1,6 +1,6 @@
 # Rhea RF Spanner privacy policy
 
-**Document status:** Pre-release policy for the current implementation. A monitored contact address and a working public policy URL have not been verified by this document. Complete those release fields before publishing this as the final policy or submitting the app.
+**Document status:** Policy for the **0.2.1 (3) diagnostic candidate**; delivery and review status are recorded separately. A monitored contact address and a working public policy URL have not been verified by this document. Complete those release fields and match this text to the final binary before publishing it as the final policy or submitting the app.
 
 ## Microphone use
 
@@ -10,15 +10,23 @@ An experiment begins only after you agree to the tone and live microphone analys
 
 ## Processing, retention, and sharing
 
-Application code processes microphone samples and displays measurements using volatile memory. It retains up to 2,048 derived telemetry records and companion spectrum arrays in memory for Replay. Each record preserves whether its source was LIVE or DEMO. No raw audio recording is created. The tape is not persisted across process termination. The app does not upload microphone samples or measurements, transcribe speech, identify people, or create a user profile. It provides no persistent recording library or data-export interface.
+Application code processes microphone samples and displays measurements using volatile memory. It retains up to 2,048 derived telemetry records and companion spectrum arrays in memory for Replay. Each record preserves whether its source was LIVE or DEMO. No raw audio recording is created. The tape is not persisted across process termination. The app does not automatically upload microphone samples or measurements, transcribe speech, identify people, or create a user profile. It provides no persistent recording library. A separate, user-initiated diagnostic-copy feature is described below.
 
-The app includes no account system, advertising, analytics SDK, tracking mechanism, or background recording mode. The current implementation does not send microphone data or measurements to the developer or a third-party service. It does not require a server connection to perform the experiment.
+The app includes no account system, advertising, analytics SDK, tracking mechanism, or background recording mode. It does not automatically send microphone data, measurements, or diagnostic reports to the developer or a third-party service. It does not require a server connection to perform the experiment.
 
-Memory-only processing is not a claim that the app controls every aspect of iOS memory management or guarantees forensic erasure. The application does not intentionally persist the samples or measurement results.
+Memory-only processing is not a claim that the app controls every aspect of iOS memory management or guarantees forensic erasure. Raw samples and the Replay tape remain in app memory; a diagnostic report that you explicitly copy has the separate clipboard lifetime described below.
+
+## Optional diagnostic report
+
+The **Diagnostics & copy report** screen shows acquisition, processing, and rendering status. The app keeps up to **128 recent operational events** in memory, overwriting older events when the log is full. **Inspect JSON report** previews a snapshot locally without sending it anywhere.
+
+The JSON includes app version/build, OS information, a generic device model, audio route port types and format, system output volume, relative intervals and normalized sample indices, counters, aggregate input statistics, scalar analysis summaries, rendering status, and sanitized error domain/code information. Timing values include per-acquisition durations and retained event offsets measured since diagnostics initialization in the current app session. Displayed processing and rendering rates are calculated from observed event counts and intervals; the report exports the counts and relative intervals. It contains no raw audio samples, spectrum arrays, camera images, location, route names or UIDs, account or network identifiers, persistent device identifiers, or absolute system-uptime/host-clock values.
+
+**Copy Diagnostic Dump** writes this JSON to the system clipboard only when you choose that action. The copy is restricted to the local device, excluded from Handoff, and assigned an expiration one hour after copying. It can remain on the clipboard after the app's process closes. You decide whether and where to paste it. The app does not automatically upload the report. A copy pasted into another app or service follows that destination's handling and retention; the clipboard expiration does not remove copies made elsewhere.
 
 ## Your controls
 
-You can stop an active experiment at any time, use DEMO without microphone permission, or clear the in-memory Replay tape. You can revoke microphone access in iOS Settings. Privacy and method information remain available without microphone permission. Because the app does not maintain an account, audio archive, or uploaded measurement record, it provides no account-deletion workflow.
+You can stop an active experiment at any time, use DEMO without microphone permission, clear the in-memory Replay tape, or inspect diagnostics without copying a report. You can revoke microphone access in iOS Settings. Privacy and method information remain available without microphone permission. Because the app does not maintain an account, audio archive, or uploaded measurement record, it provides no account-deletion workflow.
 
 Use the experiment with the agreement of people nearby. Keep the device away from ears, use a low system volume, and stop if the sound causes discomfort. The tone is not guaranteed to be inaudible. The software amplitude setting is not a calibrated sound-pressure measurement.
 
@@ -32,10 +40,14 @@ The support and privacy contact for this application has not yet been provisione
 
 ## Implementation changes
 
-Any later addition that saves measurements, exports data, uses a network service, or changes microphone behavior requires a corresponding policy review. The policy and App Store privacy declarations must describe the actual distributed build.
+Any later addition that saves measurements, expands diagnostic/export content, uses a network service, or changes microphone behavior requires a corresponding policy review. The policy and App Store privacy declarations must describe the actual distributed build.
 
 ## Maintainer note: privacy declarations
 
 Apple defines collection for its App Store privacy label in terms of transmitting data off the device with developer or partner access beyond servicing a request in real time. The current app's local processing can therefore support **Data Not Collected** only while the distributed app and its integrated components continue to match this policy. This is an implementation assessment, not an Apple approval. See [App privacy details](https://developer.apple.com/app-store/app-privacy-details/).
+
+The local Copy action does not implement a developer upload endpoint. If a later support or upload flow collects and retains reports, reassess the relevant diagnostic-data declarations; being optional or user-initiated is not by itself an exemption from Apple's disclosure criteria.
+
+The declared System Boot Time reason **35F9.1** permits measuring intervals between in-app events and sending those elapsed intervals off the device. The diagnostic report includes relative intervals and counters, not the underlying absolute uptime or host-clock readings. See [Apple's approved reasons](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype). Clipboard locality and expiration use Apple's [pasteboard privacy options](https://developer.apple.com/documentation/uikit/uipasteboard/optionskey).
 
 `PrivacyInfo.xcprivacy`, App Store Connect privacy answers, microphone permission text, and this policy serve different purposes. A valid manifest does not replace a clear permission message or the published policy.

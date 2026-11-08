@@ -8,6 +8,8 @@ struct ExperimentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var showPrivacy = false
+    @State private var showDiagnostics = ProcessInfo.processInfo.arguments.contains("--observatory-diagnostics")
+    @State private var rendererDiagnostics = RendererDiagnostics()
     @State private var showControls = true
     @State private var showReadout = true
     @State private var adjustment: Adjustment = .carrier
@@ -58,6 +60,9 @@ struct ExperimentView: View {
         .background(Color.black.ignoresSafeArea())
         .tint(accent)
         .sheet(isPresented: $showPrivacy) { PrivacyMethodView() }
+        .sheet(isPresented: $showDiagnostics) {
+            DiagnosticsView(model: model, renderer: rendererDiagnostics)
+        }
     }
 
     private var topChrome: some View {
@@ -74,7 +79,7 @@ struct ExperimentView: View {
                 }
                 .accessibilityElement(children: .combine)
                 Spacer(minLength: 4)
-                Label(model.microphoneIsActive ? "MIC ON" : "MIC OFF",
+                Label(model.microphoneIsActive ? "MIC SESSION" : "MIC OFF",
                       systemImage: model.microphoneIsActive ? "mic.fill" : "mic.slash")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(model.microphoneIsActive ? Color.orange : subdued)
@@ -82,6 +87,15 @@ struct ExperimentView: View {
                     .padding(.vertical, 7)
                     .background(Color(white: 0.12), in: Capsule())
                     .accessibilityIdentifier("activityIndicator")
+                Button { showDiagnostics = true } label: {
+                    Image(systemName: "waveform.path.ecg.rectangle")
+                        .font(.title3)
+                        .frame(width: 40, height: 44)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .accessibilityLabel("Open diagnostics")
+                .accessibilityIdentifier("openDiagnosticsButton")
                 observatoryMenu
             }
             HStack(spacing: 4) {
@@ -114,7 +128,15 @@ struct ExperimentView: View {
     private var observatoryMenu: some View {
         Menu {
             Section("Monitoring") {
+                Button { showDiagnostics = true } label: {
+                    Label("Diagnostics & copy report", systemImage: "doc.text.magnifyingglass")
+                }
                 Toggle("Phase readout", isOn: $showReadout)
+                Picker("Spectrum range", selection: $model.displayParameters.spectrumBand) {
+                    ForEach(SpectrumDisplayBand.allCases, id: \.rawValue) { band in
+                        Text(band.displayName).tag(band)
+                    }
+                }
                 Picker("False-color palette", selection: $model.displayParameters.palette) {
                     ForEach(ObservatoryPalette.allCases, id: \.rawValue) { palette in
                         Text(palette.displayName).tag(palette)
@@ -157,7 +179,8 @@ struct ExperimentView: View {
                         display: model.displayParameters,
                         presentation: model.presentation,
                         active: model.isVisualizing,
-                        reduceMotion: reduceMotion
+                        reduceMotion: reduceMotion,
+                        diagnostics: rendererDiagnostics
                     )
                     .accessibilityIdentifier("observatoryCanvas")
                     VStack(spacing: 12) {
@@ -191,6 +214,20 @@ struct ExperimentView: View {
                     viewportStatus
                 }
             }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(model.inputStatusText)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(model.microphoneIsActive ? Color.orange : subdued)
+                Text(model.inputLevelText)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .modifier(InstrumentSurface(cornerRadius: 12))
+            .accessibilityElement(children: .combine)
             if let slice = model.latestSlice, !slice.isPhaseCoherent {
                 Label(slice.validity.displayName, systemImage: "waveform.slash")
                     .font(.caption.weight(.medium))
@@ -212,7 +249,7 @@ struct ExperimentView: View {
             Text(model.isRunning ? "● REC  " + clockText : model.isReplaying ? "PLAYBACK" : "STANDBY")
                 .font(.caption2.monospacedDigit().weight(.medium))
                 .foregroundStyle(model.isRunning ? Color(red: 1, green: 0.4, blue: 0.3) : .white)
-            Text("48 kHz · 23.4 fps")
+            Text(model.measuredAcquisitionText)
                 .font(.caption2.monospaced())
                 .foregroundStyle(.white.opacity(0.65))
         }
@@ -281,8 +318,10 @@ struct ExperimentView: View {
             Text("kHz").frame(width: 44)
             GeometryReader { geometry in
                 ZStack(alignment: .topLeading) {
-                    ForEach(18...22, id: \.self) { value in
-                        let x = geometry.size.width * CGFloat(value - 18) / 4
+                    ForEach(model.displayParameters.spectrumBand.axisTicksKHz, id: \.self) { value in
+                        let band = model.displayParameters.spectrumBand
+                        let x = geometry.size.width * CGFloat(Float(value * 1_000) - band.lowerHz)
+                            / CGFloat(band.upperHz - band.lowerHz)
                         Text(String(value))
                             .frame(width: 28)
                             .position(x: min(max(14, x), max(14, geometry.size.width - 14)), y: 10)
@@ -297,7 +336,7 @@ struct ExperimentView: View {
         .font(.caption2.monospacedDigit())
         .foregroundStyle(subdued)
         .padding(.vertical, 4)
-        .accessibilityLabel("Frequency axis, 18 to 22 kilohertz")
+        .accessibilityLabel("Frequency axis, " + model.displayParameters.spectrumBand.displayName)
     }
 
     private var timeAxis: some View {
@@ -428,6 +467,13 @@ struct ExperimentView: View {
 
     private var displayPanel: some View {
         VStack(spacing: 10) {
+            Picker("Spectrum range", selection: $model.displayParameters.spectrumBand) {
+                ForEach(SpectrumDisplayBand.allCases, id: \.rawValue) { band in
+                    Text(band.displayName).tag(band)
+                }
+            }
+            .pickerStyle(.menu)
+            .accessibilityIdentifier("spectrumRangePicker")
             VStack(spacing: 0) {
                 HStack {
                     Text("Display gain")
@@ -630,7 +676,19 @@ struct ExperimentView: View {
                 .foregroundStyle(subdued)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+            if hasPipelineStall {
+                Button("Inspect pipeline diagnostics") { showDiagnostics = true }
+                    .font(.caption.weight(.semibold))
+            }
         }
+    }
+
+    private var hasPipelineStall: Bool {
+        let snapshot = model.diagnosticSnapshot
+        return snapshot.pipeline.health == PipelineHealth.inputStalled.rawValue
+            || snapshot.pipeline.health == PipelineHealth.processingStalled.rawValue
+            || snapshot.session.stopReason == ExperimentStopReason.inputStalled.diagnosticCode
+            || snapshot.session.stopReason == ExperimentStopReason.processingStalled.diagnosticCode
     }
 
     private func transportAction() {

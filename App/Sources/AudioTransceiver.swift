@@ -17,21 +17,44 @@ enum ExperimentStopReason: Int, Sendable {
     case unsupportedBuffer
     case startFailed
     case retuned
+    case inputStalled
+    case processingStalled
 
     var message: String {
         switch self {
         case .user: "Experiment stopped. The microphone and tone are off."
-        case .inactive: "Experiment stopped when the app became inactive. Tap Start experiment to begin a new session."
+        case .inactive: "Experiment stopped when the app became inactive. Tap Record to begin a new session."
         case .timeLimit: "The 60-second experiment has ended. The microphone and tone are off."
-        case .interruption: "Audio was interrupted. The experiment has stopped."
-        case .routeChanged: "The audio route changed. The experiment has stopped."
-        case .mediaServicesLost: "The audio service became unavailable. The experiment has stopped."
-        case .mediaServicesReset: "The audio service restarted. Start a new experiment when ready."
-        case .engineConfigurationChanged: "The audio format changed. The experiment has stopped."
-        case .renderTimelineChanged: "Playback sample timing became unavailable or discontinuous. The experiment has stopped."
-        case .unsupportedBuffer: "An unsupported audio buffer was received. The experiment has stopped."
-        case .startFailed: "The audio experiment could not start."
+        case .interruption: "Audio was interrupted. The experiment stopped. Open Diagnostics for the session report."
+        case .routeChanged: "The audio route changed. The experiment stopped. Open Diagnostics for the route report."
+        case .mediaServicesLost: "The audio service became unavailable. The experiment stopped. Open Diagnostics for the session report."
+        case .mediaServicesReset: "The audio service restarted. Open Diagnostics for the session report, then tap Record when ready."
+        case .engineConfigurationChanged: "The audio format changed. The experiment stopped. Open Diagnostics for the format report."
+        case .renderTimelineChanged: "Playback sample timing became unavailable or discontinuous. The experiment stopped. Open Diagnostics for the timing report."
+        case .unsupportedBuffer: "An unsupported audio buffer was received. The experiment stopped. Open Diagnostics for the format report."
+        case .startFailed: "The audio experiment could not start. Open Diagnostics for the startup report."
         case .retuned: "Carrier changed. A new acquisition and phase reference have started."
+        case .inputStalled: "No live microphone buffers arrived for 2 seconds. The experiment stopped. Open Diagnostics for the audio route and callback report."
+        case .processingStalled: "Microphone data arrived, but signal processing stalled for 2 seconds. The experiment stopped. Open Diagnostics for the pipeline report."
+        }
+    }
+
+    var diagnosticCode: String {
+        switch self {
+        case .user: "user"
+        case .inactive: "inactive"
+        case .timeLimit: "time_limit"
+        case .interruption: "interruption"
+        case .routeChanged: "route_changed"
+        case .mediaServicesLost: "media_services_lost"
+        case .mediaServicesReset: "media_services_reset"
+        case .engineConfigurationChanged: "engine_configuration_changed"
+        case .renderTimelineChanged: "render_timeline_changed"
+        case .unsupportedBuffer: "unsupported_buffer"
+        case .startFailed: "start_failed"
+        case .retuned: "retuned"
+        case .inputStalled: "input_stalled"
+        case .processingStalled: "processing_stalled"
         }
     }
 }
@@ -63,14 +86,19 @@ final class ExperimentControl: Sendable {
 /// The only cross-thread fields are `control` atomics. A context is never reused.
 private final class ToneRenderContext: @unchecked Sendable {
     private let control: ExperimentControl
+    private let diagnostics: SessionDiagnosticCounters
     private let oscillator: SineOscillator
     private let maximumSamples: UInt64
     private let rampSamples: UInt64
     private var rendered: UInt64 = 0
     private var nextRenderSampleTime: Double?
 
-    init(control: ExperimentControl, configuration: RadarConfiguration, maximumSamples: UInt64) {
+    init(
+        control: ExperimentControl, diagnostics: SessionDiagnosticCounters,
+        configuration: RadarConfiguration, maximumSamples: UInt64
+    ) {
         self.control = control
+        self.diagnostics = diagnostics
         oscillator = SineOscillator(
             configuration: configuration, amplitude: ExperimentControl.transmitAmplitude
         )
@@ -84,6 +112,7 @@ private final class ToneRenderContext: @unchecked Sendable {
         frameCount: AVAudioFrameCount,
         audioBufferList: UnsafeMutablePointer<AudioBufferList>
     ) -> OSStatus {
+        diagnostics.sourceCallbacks.wrappingAdd(1, ordering: .relaxed)
         let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
         isSilence.pointee = true
         // The source was configured as one noninterleaved Float32 channel.
@@ -112,6 +141,7 @@ private final class ToneRenderContext: @unchecked Sendable {
               nextRenderSampleTime == nil || sampleTime == nextRenderSampleTime
         else {
             destination.update(repeating: 0, count: count)
+            diagnostics.sourceTimelineErrorCount.wrappingAdd(1, ordering: .relaxed)
             control.requestStop(.renderTimelineChanged)
             return noErr
         }
@@ -151,6 +181,7 @@ private final class ToneRenderContext: @unchecked Sendable {
 private final class CaptureContext: @unchecked Sendable {
     private let ring: SPSCFloatRingBuffer
     private let control: ExperimentControl
+    private let diagnostics: SessionDiagnosticCounters
     private let expectedSampleRate: Double
     private let maximumSamples: UInt64
     private var origin: UInt64?
@@ -158,18 +189,23 @@ private final class CaptureContext: @unchecked Sendable {
     private var capturedSamples: UInt64 = 0
 
     init(
-        ring: SPSCFloatRingBuffer, control: ExperimentControl,
+        ring: SPSCFloatRingBuffer, control: ExperimentControl, diagnostics: SessionDiagnosticCounters,
         configuration: RadarConfiguration, maximumSamples: UInt64
     ) {
         self.ring = ring
         self.control = control
+        self.diagnostics = diagnostics
         expectedSampleRate = configuration.sampleRate
         self.maximumSamples = maximumSamples
     }
 
     func receive(_ buffer: AVAudioPCMBuffer, at time: AVAudioTime) {
+        diagnostics.recordInputCallback(frameCount: Int(buffer.frameLength))
         guard !control.cancelled.load(ordering: .acquiring),
-              control.audioEnabled.load(ordering: .acquiring) else { return }
+              control.audioEnabled.load(ordering: .acquiring) else {
+            diagnostics.ignoredInputCallbacks.wrappingAdd(1, ordering: .relaxed)
+            return
+        }
         guard buffer.format.commonFormat == .pcmFormatFloat32,
               !buffer.format.isInterleaved,
               buffer.format.channelCount > 0,
@@ -195,13 +231,23 @@ private final class CaptureContext: @unchecked Sendable {
         } else {
             firstSample = fallbackNextSample
         }
+        if capturedSamples > 0, firstSample != fallbackNextSample {
+            diagnostics.timestampGapCount.wrappingAdd(1, ordering: .relaxed)
+        }
+        if !timestampIsValid { diagnostics.invalidTimestampCount.wrappingAdd(1, ordering: .relaxed) }
+        diagnostics.lastCaptureSampleIndex.store(firstSample, ordering: .relaxed)
+        diagnostics.sampleTimestampValid.store(timestampIsValid, ordering: .relaxed)
+        diagnostics.hostTimestampValid.store(time.isHostTimeValid, ordering: .relaxed)
+        diagnostics.offeredSamples.wrappingAdd(UInt64(count), ordering: .relaxed)
         // Advance even when the ring drops this block. A loss cannot silently
         // become a contiguous capture timeline on a later successful write.
         fallbackNextSample = firstSample &+ UInt64(count)
-        _ = ring.write(
+        let enqueued = ring.write(
             from: channels[0], count: count,
             startSampleTime: firstSample, timestampIsValid: timestampIsValid
         )
+        if enqueued { diagnostics.enqueuedSamples.wrappingAdd(UInt64(count), ordering: .relaxed) }
+        diagnostics.acceptedInputCallbacks.wrappingAdd(1, ordering: .releasing)
         capturedSamples += UInt64(count)
         if capturedSamples >= maximumSamples { control.requestStop(.timeLimit) }
     }
@@ -211,6 +257,7 @@ private final class CaptureContext: @unchecked Sendable {
 /// `engine` is only accessed from `queue`; cancellation never resets live memory.
 final class SignalProcessingSession: @unchecked Sendable {
     let control = ExperimentControl()
+    let diagnostics = SessionDiagnosticCounters()
     let ring: SPSCFloatRingBuffer
     let configuration: RadarConfiguration
     let maximumSamples: UInt64
@@ -251,6 +298,7 @@ final class SignalProcessingSession: @unchecked Sendable {
         while !control.cancelled.load(ordering: .acquiring) {
             applyReferenceRequest()
             if let frame = engine.processNextFrame() {
+                recordDiagnosticFrame(frame)
                 onFrame(frame, engine.latestSpectrum)
             } else {
                 // A dedicated consumer queue, never an audio callback.
@@ -261,6 +309,7 @@ final class SignalProcessingSession: @unchecked Sendable {
             // Preserve complete frames already captured at the scheduled limit.
             // This is bounded by ring capacity and cannot restart acquisition.
             while let frame = engine.processNextFrame() {
+                recordDiagnosticFrame(frame)
                 onFrame(frame, engine.latestSpectrum)
             }
         }
@@ -293,9 +342,12 @@ final class SignalProcessingSession: @unchecked Sendable {
             generator.generate(into: buffer, count: count, startSampleTime: sampleTime)
             guard !control.cancelled.load(ordering: .acquiring) else { break }
             _ = ring.write(from: buffer, count: count, startSampleTime: sampleTime)
+            diagnostics.syntheticSamples.wrappingAdd(UInt64(count), ordering: .relaxed)
+            diagnostics.syntheticBlocks.wrappingAdd(1, ordering: .releasing)
             sampleTime &+= UInt64(count)
             control.renderedSamples.store(sampleTime, ordering: .releasing)
             while let frame = engine.processNextFrame() {
+                recordDiagnosticFrame(frame)
                 onFrame(frame, engine.latestSpectrum)
             }
         }
@@ -306,6 +358,12 @@ final class SignalProcessingSession: @unchecked Sendable {
         if control.resetRequested.exchange(false, ordering: .acquiringAndReleasing) {
             engine.resetCalibration()
         }
+    }
+
+    private func recordDiagnosticFrame(_ frame: PhaseTelemetryFrame) {
+        diagnostics.recordProcessedFrame(
+            frame, statistics: engine.latestInputStatistics, spectrum: engine.latestSpectrum
+        )
     }
 }
 
@@ -344,33 +402,56 @@ final class AudioTransceiver {
     private var tapInstalled = false
     private var sessionActivated = false
     private var notificationTokens: [NSObjectProtocol] = []
+    private var diagnosticState: AudioSessionDiagnosticSnapshot
 
-    init(processing: SignalProcessingSession) { self.processing = processing }
+    init(processing: SignalProcessingSession) {
+        self.processing = processing
+        diagnosticState = AudioSessionDiagnosticSnapshot(configuration: processing.configuration)
+    }
+
+    func diagnosticSnapshot() -> AudioSessionDiagnosticSnapshot {
+        // Preserve the last active/error route after deactivation. Querying it
+        // afterwards would replace the evidence with the restored idle route.
+        if sessionActivated { captureAudioConfiguration(session: AVAudioSession.sharedInstance()) }
+        diagnosticState.engineIsRunning = engine.isRunning
+        return diagnosticState
+    }
 
     func start() throws {
         #if targetEnvironment(simulator)
+        diagnosticState.lastError = SessionDiagnosticError(stage: "validate_runtime", error: AudioStartError.physicalDeviceRequired)
         throw AudioStartError.physicalDeviceRequired
         #else
         let session = AVAudioSession.sharedInstance()
         let configuration = processing.configuration
         do {
+            diagnosticState.stage = "validate_initial_route"
+            captureAudioConfiguration(session: session)
             // Do not silently redirect an existing external audio route.
             guard session.currentRoute.outputs.allSatisfy({
                 $0.portType == .builtInSpeaker || $0.portType == .builtInReceiver
             }) else { throw AudioStartError.unsupportedRoute }
+            diagnosticState.stage = "configure_category"
             try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker])
+            diagnosticState.stage = "request_sample_rate"
             try session.setPreferredSampleRate(configuration.sampleRate)
+            diagnosticState.stage = "request_io_duration"
             try session.setPreferredIOBufferDuration(Double(configuration.frameSize) / configuration.sampleRate)
+            diagnosticState.stage = "activate_session"
             try session.setActive(true)
             sessionActivated = true
+            diagnosticState.activationSucceeded = true
 
+            diagnosticState.stage = "select_builtin_microphone"
             guard let microphone = session.availableInputs?.first(where: { $0.portType == .builtInMic }) else {
                 throw AudioStartError.noBuiltInMicrophone
             }
             try session.setPreferredInput(microphone)
+            diagnosticState.stage = "select_builtin_speaker"
             try session.overrideOutputAudioPort(.speaker)
             let input = engine.inputNode
             let output = engine.outputNode
+            diagnosticState.stage = "validate_active_format"
             let (inputFormat, outputFormat) = try checkedFormats(session: session)
             guard let mono = AVAudioFormat(
                 commonFormat: .pcmFormatFloat32, sampleRate: configuration.sampleRate,
@@ -379,8 +460,10 @@ final class AudioTransceiver {
 
             let capture = CaptureContext(
                 ring: processing.ring, control: processing.control,
+                diagnostics: processing.diagnostics,
                 configuration: configuration, maximumSamples: processing.maximumSamples
             )
+            diagnosticState.stage = "install_input_tap"
             input.installTap(
                 onBus: 0, bufferSize: AVAudioFrameCount(configuration.frameSize),
                 format: inputFormat, block: Self.makeTapBlock(context: capture)
@@ -388,9 +471,10 @@ final class AudioTransceiver {
             tapInstalled = true
 
             let tone = ToneRenderContext(
-                control: processing.control, configuration: configuration,
+                control: processing.control, diagnostics: processing.diagnostics, configuration: configuration,
                 maximumSamples: processing.maximumSamples
             )
+            diagnosticState.stage = "connect_source"
             let source = Self.makeSourceNode(format: mono, context: tone)
             sourceNode = source
             engine.attach(source)
@@ -399,21 +483,28 @@ final class AudioTransceiver {
             engine.connect(source, to: mixer, format: mono)
             engine.connect(mixer, to: output, format: outputFormat)
             // The microphone is not routed to the output mixer.
+            diagnosticState.stage = "prepare_engine"
             engine.prepare()
             // Arm observers before startup. Both callbacks remain silent/ignored
             // until the actual running route has passed the checks below.
             installStopObservers(session: session)
+            diagnosticState.stage = "validate_prestart_format"
             _ = try checkedFormats(session: session)
             guard !processing.control.cancelled.load(ordering: .acquiring) else {
                 throw AudioStartError.startupInterrupted(processing.control.stopReason)
             }
+            diagnosticState.stage = "start_engine"
             try engine.start()
+            diagnosticState.stage = "validate_running_format"
             _ = try checkedFormats(session: session)
             guard !processing.control.cancelled.load(ordering: .acquiring) else {
                 throw AudioStartError.startupInterrupted(processing.control.stopReason)
             }
             processing.control.audioEnabled.store(true, ordering: .releasing)
+            diagnosticState.stage = "running"
+            diagnosticState.engineIsRunning = engine.isRunning
         } catch {
+            diagnosticState.lastError = SessionDiagnosticError(stage: diagnosticState.stage, error: error)
             processing.control.requestStop(.startFailed)
             stop()
             throw error
@@ -422,6 +513,7 @@ final class AudioTransceiver {
     }
 
     private func checkedFormats(session: AVAudioSession) throws -> (AVAudioFormat, AVAudioFormat) {
+        captureAudioConfiguration(session: session)
         guard !session.currentRoute.inputs.isEmpty,
               !session.currentRoute.outputs.isEmpty,
               session.currentRoute.inputs.allSatisfy({ $0.portType == .builtInMic }),
@@ -429,6 +521,10 @@ final class AudioTransceiver {
         else { throw AudioStartError.unsupportedRoute }
         let inputFormat = engine.inputNode.outputFormat(forBus: 0)
         let outputFormat = engine.outputNode.inputFormat(forBus: 0)
+        diagnosticState.inputSampleRateHz = finiteDiagnosticValue(inputFormat.sampleRate)
+        diagnosticState.outputSampleRateHz = finiteDiagnosticValue(outputFormat.sampleRate)
+        diagnosticState.inputChannels = Int(inputFormat.channelCount)
+        diagnosticState.outputChannels = Int(outputFormat.channelCount)
         let rate = processing.configuration.sampleRate
         guard abs(session.sampleRate - rate) < 0.01,
               abs(inputFormat.sampleRate - rate) < 0.01,
@@ -443,7 +539,18 @@ final class AudioTransceiver {
         return (inputFormat, outputFormat)
     }
 
+    private func captureAudioConfiguration(session: AVAudioSession) {
+        diagnosticState.category = session.category.rawValue
+        diagnosticState.mode = session.mode.rawValue
+        diagnosticState.inputPortTypes = session.currentRoute.inputs.map { $0.portType.rawValue }.sorted()
+        diagnosticState.outputPortTypes = session.currentRoute.outputs.map { $0.portType.rawValue }.sorted()
+        diagnosticState.actualSampleRateHz = finiteDiagnosticValue(session.sampleRate)
+        diagnosticState.actualIOBufferDurationSeconds = finiteDiagnosticValue(session.ioBufferDuration)
+        diagnosticState.outputVolume = finiteDiagnosticValue(Double(session.outputVolume))
+    }
+
     func stop() {
+        if sessionActivated { captureAudioConfiguration(session: AVAudioSession.sharedInstance()) }
         processing.control.audioEnabled.store(false, ordering: .releasing)
         for token in notificationTokens { NotificationCenter.default.removeObserver(token) }
         notificationTokens.removeAll()
@@ -458,9 +565,17 @@ final class AudioTransceiver {
             sourceNode = nil
         }
         if sessionActivated {
-            try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+                diagnosticState.deactivationSucceeded = true
+            } catch {
+                diagnosticState.deactivationSucceeded = false
+                diagnosticState.cleanupError = SessionDiagnosticError(stage: "deactivate_session", error: error)
+            }
             sessionActivated = false
         }
+        diagnosticState.stage = "stopped"
+        diagnosticState.engineIsRunning = engine.isRunning
         // No ring reset: any in-flight callback/consumer retains its own context.
     }
 
@@ -474,12 +589,16 @@ final class AudioTransceiver {
         for (name, reason) in events {
             notificationTokens.append(NotificationCenter.default.addObserver(
                 forName: name, object: session, queue: nil,
-                using: Self.makeStopObserver(control: processing.control, reason: reason)
+                using: Self.makeStopObserver(
+                    control: processing.control, diagnostics: processing.diagnostics, reason: reason
+                )
             ))
         }
         notificationTokens.append(NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil,
-            using: Self.makeStopObserver(control: processing.control, reason: .engineConfigurationChanged)
+            using: Self.makeStopObserver(
+                control: processing.control, diagnostics: processing.diagnostics, reason: .engineConfigurationChanged
+            )
         ))
     }
 
@@ -496,9 +615,18 @@ final class AudioTransceiver {
     }
 
     nonisolated private static func makeStopObserver(
-        control: ExperimentControl, reason: ExperimentStopReason
+        control: ExperimentControl, diagnostics: SessionDiagnosticCounters, reason: ExperimentStopReason
     ) -> @Sendable (Notification) -> Void {
-        { _ in
+        { notification in
+            if reason == .routeChanged {
+                diagnostics.routeChangeNotificationCount.wrappingAdd(1, ordering: .relaxed)
+                if let code = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt {
+                    diagnostics.lastRouteChangeReason.store(UInt64(code) &+ 1, ordering: .relaxed)
+                }
+            } else if reason == .interruption,
+                      let code = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt {
+                diagnostics.lastInterruptionType.store(UInt64(code) &+ 1, ordering: .relaxed)
+            }
             // Do not tear down AVAudioEngine from its internal notification queue.
             // The worker observes this flag and asks the main actor to stop it.
             control.requestStop(reason)

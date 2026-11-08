@@ -68,7 +68,11 @@ Samples are not clipped. The model is separate from renderer gain/persistence.
 The analysis uses a Hann-windowed spectrum with dBFS amplitude scaling. At the
 standard 2,048-sample window, FFT bins are 48,000 / 2,048 = 23.4375 Hz apart.
 This bin spacing is not a calibrated resolving-power claim. The displayed
-frequency band is approximately 18–22 kHz, bounded by available FFT bins.
+frequency band is selectable: **Full audio · 0–24 kHz** or **Carrier · 18–22 kHz**,
+bounded by available FFT bins. Ordinary launch defaults to full-band Waterfall.
+When multiple FFT bins occupy one display column, the strongest measured bin is
+retained so a narrow peak does not disappear during display downsampling.
+This changes the display only; LIVE still emits the selected acoustic carrier.
 
 Spectral rows are ordered oldest to newest in application history; the
 renderer places the newest row according to its labelled time axis. A new
@@ -129,4 +133,27 @@ still applies. When full, the oldest record and its companion are overwritten.
 The tape belongs to one serial owner (MainActor in this app), not the audio
 callback. Records retain source, carrier, epoch, validity, and reset flags.
 The app offers playback from volatile memory only. No raw audio file,
-measurement upload, persistent recording library, or export interface is added.
+measurement upload, persistent recording library, or Replay export is added.
+
+## Operational diagnostics
+
+The Diagnostics panel observes accepted microphone callbacks, actual buffer
+sizes, aggregate sample levels, processed frames, spectral availability, and
+successful GPU completion callbacks. Synthetic blocks have separate counters.
+An activated audio session is not treated as evidence of sample delivery.
+The LIVE watchdog stops acquisition after a two-second input or processing stall
+and retains a reason; opening or copying Diagnostics does not drive that watchdog.
+
+The local diagnostic report contains counters, relative elapsed intervals,
+scalar summaries, actual audio configuration, controlled errors, and at most 128
+recent events. Event intervals use one private diagnostics-session origin so
+restarts do not mislabel retained history. Absolute uptime and host timestamps,
+raw audio, spectrum arrays, images, and route identifiers are excluded. Rates
+shown in the HUD are computed from interval counts and are not serialized as
+additional measurements. Copying is explicit and uses a device-local clipboard
+entry with a one-hour expiry. No automatic transmission occurs.
+
+The silent self-test uses its own queue and estimator with two analytical
+20.5 kHz cosine blocks, a known phase step, and explicit amplitude/FFT tolerances.
+It tests the software path only. See [DIAGNOSTICS_CORE.md](DIAGNOSTICS_CORE.md) for
+the portable statistics, bounded event log, and pipeline-health semantics.

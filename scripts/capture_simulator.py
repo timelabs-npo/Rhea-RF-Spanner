@@ -50,6 +50,7 @@ def main() -> None:
         ("01-idle", []),
         ("02-demo-field", ["--observatory-demo"]),
         ("03-demo-waterfall", ["--observatory-demo", "--observatory-waterfall"]),
+        ("04-demo-diagnostics", ["--observatory-demo", "--observatory-waterfall", "--observatory-diagnostics"]),
     ]
     manifest = {"bundle": BUNDLE, "simulator": preferred["name"], "screenshots": []}
     for name, args in scenarios:

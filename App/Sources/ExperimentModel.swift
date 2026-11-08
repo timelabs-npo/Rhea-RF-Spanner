@@ -5,6 +5,52 @@ import SwiftUI
 import Synchronization
 import UIKit
 
+enum ExperimentMicrophonePermission { case granted, denied, undetermined, unavailable }
+
+/// The model owns lifecycle decisions; the concrete adapter owns AVAudioEngine.
+/// Tests can record those decisions without opening a microphone or speaker.
+@MainActor
+protocol ExperimentAudioSession: AnyObject {
+    func start() throws
+    func stop()
+    func diagnosticSnapshot() -> AudioSessionDiagnosticSnapshot
+}
+
+extension AudioTransceiver: ExperimentAudioSession {}
+
+@MainActor
+struct ExperimentRuntime {
+    let clock: @MainActor () -> TimeInterval
+    let liveIsSupported: Bool
+    let recordPermission: @MainActor () -> ExperimentMicrophonePermission
+    let requestRecordPermission: @MainActor () async -> Bool
+    let makeAudio: @MainActor (SignalProcessingSession) -> any ExperimentAudioSession
+
+    /// Production always uses these defaults; launch arguments and UI cannot
+    /// override dependencies.
+    static var system: Self {
+        #if targetEnvironment(simulator)
+        let liveIsSupported = false
+        #else
+        let liveIsSupported = true
+        #endif
+        return Self(
+            clock: { ProcessInfo.processInfo.systemUptime },
+            liveIsSupported: liveIsSupported,
+            recordPermission: {
+                switch AVAudioApplication.shared.recordPermission {
+                case .granted: .granted
+                case .denied: .denied
+                case .undetermined: .undetermined
+                @unknown default: .unavailable
+                }
+            },
+            requestRecordPermission: { await AVAudioApplication.requestRecordPermission() },
+            makeAudio: { AudioTransceiver(processing: $0) }
+        )
+    }
+}
+
 @MainActor
 final class ExperimentModel: ObservableObject {
     enum State: Equatable { case idle, requestingPermission, preparing, running }
@@ -12,7 +58,7 @@ final class ExperimentModel: ObservableObject {
     @Published private(set) var state: State = .idle
     @Published var consentGiven = false
     @Published private(set) var mode: ObservatoryMode = .live
-    @Published var presentation: ObservatoryPresentation = .field
+    @Published var presentation: ObservatoryPresentation = .waterfall
     @Published var displayParameters = DisplayParameters()
     @Published private(set) var carrierFrequencyHz = 20_000
     @Published private(set) var latestFrame: PhaseTelemetryFrame?
@@ -28,6 +74,7 @@ final class ExperimentModel: ObservableObject {
     @Published private(set) var message = "Read the method, agree to live audio, then tap Record."
     @Published private(set) var referenceMessage = "The first valid tone estimate establishes a phase reference."
     @Published private(set) var microphoneDenied = false
+    @Published private(set) var diagnosticSnapshot: SessionDiagnosticSnapshot
 
     /// Acquisition parameters never contain display gain, palette, or persistence.
     let simulationParameters = SimulationParameters()
@@ -38,7 +85,7 @@ final class ExperimentModel: ObservableObject {
         let id: UInt64
         let source: ObservationSource
         let processing: SignalProcessingSession
-        let audio: AudioTransceiver?
+        let audio: (any ExperimentAudioSession)?
         let samplesBeforeRun: UInt64
     }
 
@@ -68,27 +115,68 @@ final class ExperimentModel: ObservableObject {
     private var permissionTask: Task<Void, Never>?
     private var durationTask: Task<Void, Never>?
     private var replayTask: Task<Void, Never>?
+    private let runtime: ExperimentRuntime
+    private var acquisitionStartedAt: TimeInterval?
+    private let diagnosticIdentity: AppDiagnosticIdentity
+    private let diagnosticLogStartedAt: TimeInterval
+    private var diagnosticLog = SessionDiagnosticLog()
+    private var diagnosticSequence: UInt64 = 0
+    private var diagnosticProcessing: SignalProcessingSession?
+    private var diagnosticAudio: (any ExperimentAudioSession)?
+    private var diagnosticSource: ObservationSource?
+    private var diagnosticRunID: UInt64?
+    private var diagnosticReferenceEpoch: UInt32?
+    private var diagnosticRunStartedAt: TimeInterval?
+    private var diagnosticMonitoringStartedAt: TimeInterval?
+    private var diagnosticRunEndedAt: TimeInterval?
+    private var diagnosticStopReason: ExperimentStopReason?
+    private var firstObservedInputAt: TimeInterval?
+    private var lastObservedInputAt: TimeInterval?
+    private var lastObservedProcessingAt: TimeInterval?
+    private var lastObservedInputCount: UInt64 = 0
+    private var lastObservedProcessingCount: UInt64 = 0
+    private var diagnosticWindowStartedAt: TimeInterval?
+    private var diagnosticWindowInputCount: UInt64 = 0
+    private var diagnosticWindowProcessedCount: UInt64 = 0
+    private var lastWindowElapsedSeconds: Double?
+    private var lastWindowInputCallbacks: UInt64 = 0
+    private var lastWindowProcessedFrames: UInt64 = 0
+    private var recordedFirstInput = false
+    private var recordedFirstProcessedFrame = false
 
-    init(arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(
+        arguments: [String] = ProcessInfo.processInfo.arguments,
+        runtime: ExperimentRuntime? = nil
+    ) {
+        let runtime = runtime ?? .system
+        self.runtime = runtime
+        diagnosticLogStartedAt = runtime.clock()
+        let identity = AppDiagnosticIdentity.current()
+        diagnosticIdentity = identity
+        diagnosticSnapshot = SessionDiagnosticSnapshot(
+            schemaVersion: 1, snapshotSequence: 0, app: identity,
+            session: SessionDiagnosticState(
+                state: "idle", mode: "live", captureSource: nil, appIsActive: false, runID: nil,
+                referenceEpoch: nil, carrierHz: 20_000, elapsedSeconds: 0, stopReason: nil
+            ),
+            audio: nil, pipeline: PipelineDiagnosticSnapshot(), events: [], droppedEventCount: 0
+        )
         // Visual capture may launch a silent DEMO. No launch argument can start
         // LIVE or bypass consent, the permission flow, or the Record action.
         if arguments.contains("--observatory-demo") {
             mode = .demo
+            presentation = .field
             pendingLaunchDemo = true
             message = "Silent deterministic DEMO. No microphone or speaker is used."
         } else if !liveIsSupported {
             message = "LIVE requires a physical device. Choose DEMO for a silent simulation."
         }
         if arguments.contains("--observatory-waterfall") { presentation = .waterfall }
+        recordDiagnosticEvent(category: "session", code: "initialized", message: "Session diagnostics initialized. No sensors have been started.")
+        refreshDiagnostics()
     }
 
-    var liveIsSupported: Bool {
-        #if targetEnvironment(simulator)
-        false
-        #else
-        true
-        #endif
-    }
+    var liveIsSupported: Bool { runtime.liveIsSupported }
 
     var isRunning: Bool { state == .running }
     var isVisualizing: Bool { isRunning || isReplaying }
@@ -123,8 +211,53 @@ final class ExperimentModel: ObservableObject {
         }
     }
 
+    var measuredAcquisitionText: String {
+        let pipeline = diagnosticSnapshot.pipeline
+        guard isRunning else { return "Capture stopped" }
+        let rate = pipeline.processedFramesPerSecond.map { String(format: "%.1f DSP/s", $0) } ?? "DSP rate pending"
+        if diagnosticSource == .simulated { return "SIM · \(rate)" }
+        let sampleRate = diagnosticSnapshot.audio?.inputSampleRateHz
+            .map { String(format: "%.1f kHz", $0 / 1_000) } ?? "Rate unavailable"
+        return "\(sampleRate) · \(rate)"
+    }
+
+    var inputStatusText: String {
+        let pipeline = diagnosticSnapshot.pipeline
+        guard let diagnosticSource else { return "Acquisition has not started" }
+        if diagnosticSource == .simulated {
+            return pipeline.syntheticBlocks > 0 ? "Synthetic samples received" : "Waiting for synthetic samples"
+        }
+        if diagnosticStopReason == .inputStalled { return "Stopped: no microphone buffers" }
+        if diagnosticStopReason == .processingStalled { return "Stopped: DSP stopped producing frames" }
+        if pipeline.acceptedInputCallbacks == 0 {
+            return isRunning ? "Waiting for microphone buffers" : "No microphone samples received"
+        }
+        if let input = pipeline.latestInput {
+            if input.nonFiniteSampleCount > 0 { return "Input contains non-finite samples" }
+            if input.sampleCount > 0, input.zeroSampleCount == input.sampleCount { return "Microphone buffers are silent" }
+        }
+        if pipeline.sampleTimestampValid == false { return "Samples received · timing unavailable" }
+        return "Microphone samples received"
+    }
+
+    var inputLevelText: String {
+        guard let input = diagnosticSnapshot.pipeline.latestInput,
+              let rms = input.rms, let peak = input.peak else { return "Input level pending" }
+        if rms == 0 { return "RMS silence · peak 0" }
+        let dbfs = 20 * log10(rms)
+        guard dbfs.isFinite else { return "Input level unavailable" }
+        return String(format: "RMS %.1f dBFS · peak %.4f", dbfs, peak)
+    }
+
     func setAppActive(_ active: Bool) {
+        let changed = appIsActive != active
         appIsActive = active
+        if changed {
+            recordDiagnosticEvent(
+                category: "lifecycle", code: active ? "became_active" : "became_inactive",
+                message: active ? "The app became active." : "The app became inactive."
+            )
+        }
         if !active {
             if activeRun != nil || pendingRetune != nil || isReplaying { stopExperiment(reason: .inactive) }
             // A permission dialog can make the scene inactive. Its response only
@@ -134,6 +267,7 @@ final class ExperimentModel: ObservableObject {
             guard mode == .demo, state == .idle else { return }
             beginAcquisition(source: .simulated)
         }
+        refreshDiagnostics()
     }
 
     func selectMode(_ selection: ObservatoryMode) {
@@ -141,6 +275,7 @@ final class ExperimentModel: ObservableObject {
         pendingLaunchDemo = false
         stopExperiment()
         mode = selection
+        recordDiagnosticEvent(category: "session", code: "mode_selected", message: "Selected \(selection.rawValue) mode.")
         microphoneDenied = false
         if selection == .replay {
             if tape.count > 0 {
@@ -159,6 +294,7 @@ final class ExperimentModel: ObservableObject {
                     ? "LIVE uses the built-in microphone and speaker. Agree below, then tap Record."
                     : "LIVE requires a physical device. DEMO is available in the simulator."
         }
+        refreshDiagnostics()
     }
 
     func startExperiment() {
@@ -174,18 +310,23 @@ final class ExperimentModel: ObservableObject {
                 message = AudioStartError.physicalDeviceRequired.localizedDescription
                 return
             }
-            switch AVAudioApplication.shared.recordPermission {
+            switch runtime.recordPermission() {
             case .granted:
                 microphoneDenied = false
                 beginAcquisition(source: .microphone)
             case .denied:
                 microphoneDenied = true
                 message = "Microphone permission is denied. You can change it in iOS Settings."
+                recordDiagnosticEvent(category: "permission", code: "microphone_denied", message: "Microphone permission is denied.")
+                refreshDiagnostics()
             case .undetermined:
                 state = .requestingPermission
                 message = "Waiting for microphone permission. LIVE has not started."
+                recordDiagnosticEvent(category: "permission", code: "microphone_requested", message: "Requested microphone permission; acquisition has not started.")
+                refreshDiagnostics()
                 permissionTask = Task { [weak self] in
-                    let granted = await AVAudioApplication.requestRecordPermission()
+                    guard let permissionProvider = self?.runtime.requestRecordPermission else { return }
+                    let granted = await permissionProvider()
                     guard !Task.isCancelled, let self else { return }
                     state = .idle
                     microphoneDenied = !granted
@@ -193,9 +334,16 @@ final class ExperimentModel: ObservableObject {
                         ? "Microphone permission granted. Tap Record when you are ready for the tone."
                         : "Microphone permission was not granted. The microphone and speaker remain off."
                     permissionTask = nil
+                    recordDiagnosticEvent(
+                        category: "permission", code: granted ? "microphone_granted" : "microphone_denied",
+                        message: granted ? "Microphone permission granted; a new Record action is required." : "Microphone permission was not granted."
+                    )
+                    refreshDiagnostics()
                 }
-            @unknown default:
+            case .unavailable:
                 message = "Microphone permission is unavailable on this system."
+                recordDiagnosticEvent(category: "permission", code: "microphone_unknown", message: "Microphone permission state is unknown.")
+                refreshDiagnostics()
             }
         }
     }
@@ -207,9 +355,9 @@ final class ExperimentModel: ObservableObject {
         recordingID &+= 1
         elapsedSeconds = 0
         clearDisplayedFrames()
-        let startedAt = ProcessInfo.processInfo.systemUptime
+        acquisitionStartedAt = runtime.clock()
         beginRun(source: source, samplesBeforeRun: 0)
-        if isRunning { startDurationTask(recording: recordingID, startedAt: startedAt) }
+        if isRunning { startDurationTask(recording: recordingID) }
     }
 
     private func beginRun(source: ObservationSource, samplesBeforeRun: UInt64) {
@@ -232,7 +380,7 @@ final class ExperimentModel: ObservableObject {
             configuration: configuration, maximumSamples: maximum - samplesBeforeRun
         )
         // DEMO never constructs the audio transceiver or its AVAudioEngine.
-        let audio = source == .microphone ? AudioTransceiver(processing: processing) : nil
+        let audio = source == .microphone ? runtime.makeAudio(processing) : nil
         recordingContexts[runID] = RecordingContext(
             source: source, carrierFrequencyHz: carrierFrequencyHz, epoch: allocateEpoch()
         )
@@ -240,6 +388,7 @@ final class ExperimentModel: ObservableObject {
             id: runID, source: source, processing: processing,
             audio: audio, samplesBeforeRun: samplesBeforeRun
         )
+        prepareDiagnosticRun(processing: processing, audio: audio, source: source, runID: runID)
         do {
             try audio?.start()
             guard !processing.control.cancelled.load(ordering: .acquiring) else {
@@ -249,9 +398,21 @@ final class ExperimentModel: ObservableObject {
                 return
             }
             state = .running
+            let readyAt = runtime.clock()
+            diagnosticMonitoringStartedAt = readyAt
+            diagnosticWindowStartedAt = readyAt
+            // Audio startup can already have delivered ignored tap callbacks.
+            // Keep them in lifetime evidence, but exclude them from the new
+            // observation interval's callback rate.
+            diagnosticWindowInputCount = processing.diagnostics.inputCallbacks.load(ordering: .acquiring)
+            diagnosticWindowProcessedCount = processing.diagnostics.processedFrames.load(ordering: .acquiring)
             message = source == .simulated
                 ? "Recording synthetic DEMO frames. The microphone and speaker are off."
-                : "LIVE microphone and \(carrierText) speaker tone are active. Tap Stop at any time."
+                : "LIVE started. Waiting for microphone samples. Open Diagnostics to inspect the pipeline."
+            recordDiagnosticEvent(
+                category: "session", code: "run_started",
+                message: source == .simulated ? "Synthetic sample generation started." : "Audio engine started; waiting for input and DSP evidence."
+            )
             processing.start(
                 simulation: source == .simulated ? simulationParameters : nil,
                 onFrame: { [weak self] frame, spectrum in
@@ -267,6 +428,7 @@ final class ExperimentModel: ObservableObject {
                     }
                 }
             )
+            refreshDiagnostics()
         } catch {
             processing.control.requestStop(.startFailed)
             audio?.stop()
@@ -274,8 +436,16 @@ final class ExperimentModel: ObservableObject {
             recordingContexts.removeValue(forKey: runID)
             durationTask?.cancel()
             durationTask = nil
+            acquisitionStartedAt = nil
             state = .idle
-            message = error.localizedDescription
+            diagnosticStopReason = processing.control.stopReason
+            diagnosticRunEndedAt = runtime.clock()
+            recordDiagnosticEvent(
+                category: "error", code: "start_failed",
+                message: "Acquisition could not start. The audio snapshot contains the failed stage and error identifiers."
+            )
+            message = error.localizedDescription + " Open Diagnostics for the startup report."
+            refreshDiagnostics()
         }
     }
 
@@ -296,6 +466,7 @@ final class ExperimentModel: ObservableObject {
             state = .preparing
         }
         carrierFrequencyHz = frequency
+        recordDiagnosticEvent(category: "acquisition", code: "carrier_selected", message: "Carrier set to \(frequency) Hz; a new reference is required.")
         clearDisplayedFrames()
         referenceMessage = "Carrier changed. The next valid frame establishes a new phase reference."
         if pendingRetune != nil {
@@ -303,6 +474,7 @@ final class ExperimentModel: ObservableObject {
         } else {
             message = "Carrier set to \(carrierText). The next recording starts a new phase reference."
         }
+        refreshDiagnostics()
     }
 
     func stepCarrier(by steps: Int) {
@@ -328,6 +500,7 @@ final class ExperimentModel: ObservableObject {
             context.hasReference = true
         }
         recordingContexts[runID] = context
+        if diagnosticRunID == runID { diagnosticReferenceEpoch = context.epoch }
         let slice = SpatioTemporalSlice(
             frame: frame, source: context.source,
             carrierFrequencyHz: context.carrierFrequencyHz, epoch: context.epoch
@@ -378,6 +551,7 @@ final class ExperimentModel: ObservableObject {
             // worker is finished, then permit scrubbing stable logical indices.
             displayReplayFrame(at: tape.count - 1)
         }
+        refreshDiagnostics()
     }
 
     private func updateElapsed(for run: ActiveRun) {
@@ -385,7 +559,7 @@ final class ExperimentModel: ObservableObject {
         elapsedSeconds = min(60, Double(run.samplesBeforeRun + current) / run.processing.configuration.sampleRate)
     }
 
-    private func startDurationTask(recording: UInt64, startedAt: TimeInterval) {
+    private func startDurationTask(recording: UInt64) {
         durationTask?.cancel()
         durationTask = Task { [weak self] in
             // Independent of the realtime sample cap. This also ends a stalled
@@ -395,18 +569,31 @@ final class ExperimentModel: ObservableObject {
                 catch { return }
                 guard let self, recordingID == recording,
                       activeRun != nil || pendingRetune != nil else { return }
-                if let run = activeRun ?? pendingRetune?.previousRun { updateElapsed(for: run) }
-                if ProcessInfo.processInfo.systemUptime - startedAt >= 60 {
-                    stopExperiment(reason: .timeLimit)
-                    return
-                }
+                if !monitorAcquisition() { return }
             }
         }
+    }
+
+    /// One production watchdog/deadline tick. The task invokes this at 4 Hz;
+    /// deterministic tests invoke the same lifecycle path with a supplied clock.
+    /// Diagnostic inspection/copy continues to call refreshDiagnostics only.
+    @discardableResult
+    func monitorAcquisition() -> Bool {
+        guard let run = activeRun ?? pendingRetune?.previousRun else { return false }
+        updateElapsed(for: run)
+        refreshDiagnostics()
+        if stopStalledLivePipelineIfNeeded() { return false }
+        if let startedAt = acquisitionStartedAt, runtime.clock() - startedAt >= 60 {
+            stopExperiment(reason: .timeLimit)
+            return false
+        }
+        return true
     }
 
     func resetPhaseReference() {
         guard let run = activeRun, isRunning else { return }
         run.processing.control.resetRequested.store(true, ordering: .releasing)
+        recordDiagnosticEvent(category: "acquisition", code: "reference_reset_requested", message: "The user requested a new phase reference.")
         referenceMessage = "Reference reset requested. Waiting for the next valid tone estimate."
     }
 
@@ -417,6 +604,12 @@ final class ExperimentModel: ObservableObject {
         isFinishingProcessing = recordingContexts[run.id] != nil
         run.processing.control.requestStop(reason)
         run.audio?.stop()
+        diagnosticStopReason = run.processing.control.stopReason
+        diagnosticRunEndedAt = runtime.clock()
+        recordDiagnosticEvent(
+            category: "session", code: diagnosticStopReason?.diagnosticCode ?? reason.diagnosticCode,
+            message: "Acquisition stopped. Microphone and tone have been disabled."
+        )
         updateElapsed(for: run)
         return run.samplesBeforeRun + run.processing.control.renderedSamples.load(ordering: .acquiring)
     }
@@ -426,6 +619,7 @@ final class ExperimentModel: ObservableObject {
         permissionTask = nil
         durationTask?.cancel()
         durationTask = nil
+        acquisitionStartedAt = nil
         let source = activeRun?.source ?? pendingRetune?.previousRun.source
         pendingRetune = nil
         endActiveRun(reason: reason)
@@ -444,6 +638,7 @@ final class ExperimentModel: ObservableObject {
         }
         // Keep the last measured/simulated frame visible, frozen and labelled.
         referenceMessage = "A new recording will establish a new phase reference."
+        refreshDiagnostics()
     }
 
     func selectReplayFrame(_ index: Int) {
@@ -541,5 +736,166 @@ final class ExperimentModel: ObservableObject {
     func openSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
+    }
+
+    private func prepareDiagnosticRun(
+        processing: SignalProcessingSession, audio: (any ExperimentAudioSession)?,
+        source: ObservationSource, runID: UInt64
+    ) {
+        diagnosticProcessing = processing
+        diagnosticAudio = audio
+        diagnosticSource = source
+        diagnosticRunID = runID
+        diagnosticReferenceEpoch = recordingContexts[runID]?.epoch
+        diagnosticRunStartedAt = runtime.clock()
+        diagnosticMonitoringStartedAt = nil
+        diagnosticRunEndedAt = nil
+        diagnosticStopReason = nil
+        firstObservedInputAt = nil
+        lastObservedInputAt = nil
+        lastObservedProcessingAt = nil
+        lastObservedInputCount = 0
+        lastObservedProcessingCount = 0
+        diagnosticWindowStartedAt = nil
+        diagnosticWindowInputCount = 0
+        diagnosticWindowProcessedCount = 0
+        lastWindowElapsedSeconds = nil
+        lastWindowInputCallbacks = 0
+        lastWindowProcessedFrames = 0
+        recordedFirstInput = false
+        recordedFirstProcessedFrame = false
+        recordDiagnosticEvent(category: "session", code: "run_preparing", message: "Preparing acquisition run \(runID).")
+        refreshDiagnostics()
+    }
+
+    /// Samples counters on the main actor. This function never starts, stops,
+    /// or restarts acquisition, including when invoked by Copy diagnostics.
+    func refreshDiagnostics() {
+        let now = runtime.clock()
+        let observedAt = diagnosticRunEndedAt ?? now
+        var pipeline = diagnosticProcessing.map { processing in
+            processing.diagnostics.snapshot(
+                ring: processing.ring,
+                renderedSamples: processing.control.renderedSamples.load(ordering: .acquiring)
+            )
+        } ?? PipelineDiagnosticSnapshot()
+        let inputProgress = diagnosticSource == .simulated
+            ? pipeline.syntheticBlocks : pipeline.acceptedInputCallbacks
+        if inputProgress > lastObservedInputCount {
+            if firstObservedInputAt == nil { firstObservedInputAt = observedAt }
+            lastObservedInputAt = observedAt
+            lastObservedInputCount = inputProgress
+            if !recordedFirstInput {
+                recordedFirstInput = true
+                recordDiagnosticEvent(
+                    category: "pipeline", code: "first_input",
+                    message: diagnosticSource == .simulated
+                        ? "The synthetic producer supplied sample blocks."
+                        : "The microphone tap supplied supported sample buffers."
+                )
+                if isRunning, diagnosticSource == .microphone {
+                    message = "Microphone samples are arriving. Input level and spectrum are independent of phase quality."
+                }
+            }
+        }
+        if pipeline.processedFrames > lastObservedProcessingCount {
+            lastObservedProcessingAt = observedAt
+            lastObservedProcessingCount = pipeline.processedFrames
+            if !recordedFirstProcessedFrame {
+                recordedFirstProcessedFrame = true
+                recordDiagnosticEvent(
+                    category: "pipeline", code: "first_processed_frame",
+                    message: "The DSP consumer produced a frame. Phase validity is reported separately."
+                )
+            }
+        }
+        pipeline.secondsSinceInput = lastObservedInputAt.map { max(0, observedAt - $0) }
+        pipeline.secondsSinceProcessing = lastObservedProcessingAt.map { max(0, observedAt - $0) }
+
+        if let windowStart = diagnosticWindowStartedAt {
+            let windowElapsed = max(0, observedAt - windowStart)
+            if windowElapsed >= 0.5 {
+                lastWindowElapsedSeconds = windowElapsed
+                // Count callbacks observed since this window's baseline,
+                // including ignored callbacks inside that interval. DEMO reports synthetic counts
+                // separately and never impersonates a microphone callback.
+                lastWindowInputCallbacks = pipeline.inputCallbacks &- diagnosticWindowInputCount
+                lastWindowProcessedFrames = pipeline.processedFrames &- diagnosticWindowProcessedCount
+                diagnosticWindowStartedAt = observedAt
+                diagnosticWindowInputCount = pipeline.inputCallbacks
+                diagnosticWindowProcessedCount = pipeline.processedFrames
+            }
+        }
+        pipeline.samplingWindowElapsedSeconds = lastWindowElapsedSeconds
+        pipeline.inputCallbacksInWindow = lastWindowInputCallbacks
+        pipeline.processedFramesInWindow = lastWindowProcessedFrames
+
+        let monitoringElapsed = diagnosticMonitoringStartedAt.map { max(0, observedAt - $0) } ?? 0
+        let observingActiveRun = isRunning && activeRun?.id == diagnosticRunID
+        var health = PipelineHealth.evaluate(
+            isRunning: observingActiveRun,
+            elapsedSeconds: monitoringElapsed,
+            inputCallbacks: inputProgress,
+            processedFrames: pipeline.processedFrames,
+            secondsSinceInput: pipeline.secondsSinceInput,
+            secondsSinceProcessing: pipeline.secondsSinceProcessing
+        )
+        // A late first input block starts the initial DSP grace interval. Do
+        // not call a consumer stalled before it has had two seconds of input.
+        if health == .processingStalled, pipeline.processedFrames == 0,
+           let firstInput = firstObservedInputAt, observedAt - firstInput < 2 {
+            health = .waitingForProcessing
+        }
+        pipeline.health = health.rawValue
+        let stateName: String
+        switch state {
+        case .idle: stateName = "idle"
+        case .requestingPermission: stateName = "requesting_permission"
+        case .preparing: stateName = "preparing"
+        case .running: stateName = "running"
+        }
+        let sourceName: String?
+        switch diagnosticSource {
+        case .microphone: sourceName = "microphone"
+        case .simulated: sourceName = "simulated"
+        case nil: sourceName = nil
+        }
+        diagnosticSequence &+= 1
+        diagnosticSnapshot = SessionDiagnosticSnapshot(
+            schemaVersion: 1, snapshotSequence: diagnosticSequence, app: diagnosticIdentity,
+            session: SessionDiagnosticState(
+                state: stateName, mode: mode.rawValue, captureSource: sourceName,
+                appIsActive: appIsActive, runID: diagnosticRunID,
+                referenceEpoch: diagnosticReferenceEpoch,
+                carrierHz: diagnosticProcessing?.configuration.carrierFrequencyHz ?? carrierFrequencyHz,
+                elapsedSeconds: diagnosticRunStartedAt.map { max(0, observedAt - $0) } ?? 0,
+                stopReason: diagnosticStopReason?.diagnosticCode
+            ),
+            audio: diagnosticAudio?.diagnosticSnapshot(), pipeline: pipeline,
+            events: diagnosticLog.events, droppedEventCount: diagnosticLog.droppedEventCount
+        )
+    }
+
+    /// The wall-clock monitor owns stopping. Diagnostic exports remain read-only.
+    private func stopStalledLivePipelineIfNeeded() -> Bool {
+        guard isRunning, let run = activeRun, run.source == .microphone,
+              !run.processing.control.cancelled.load(ordering: .acquiring) else { return false }
+        switch diagnosticSnapshot.pipeline.health {
+        case PipelineHealth.inputStalled.rawValue:
+            stopExperiment(reason: .inputStalled)
+            return true
+        case PipelineHealth.processingStalled.rawValue:
+            stopExperiment(reason: .processingStalled)
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func recordDiagnosticEvent(category: String, code: String, message: String) {
+        // Events share one app-session origin, including idle intervals and
+        // new runs. Only elapsed time from this app event enters the export.
+        let elapsed = max(0, runtime.clock() - diagnosticLogStartedAt)
+        diagnosticLog.append(elapsedSeconds: elapsed, category: category, code: code, message: message)
     }
 }

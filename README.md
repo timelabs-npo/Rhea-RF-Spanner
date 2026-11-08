@@ -20,7 +20,21 @@ False color does not imply thermal sensing.
 
 ## Build and validation status
 
-**Native validation passed:** the release signal core compiled, all **41 core
+**Current work: 0.2.1 (3), diagnostic candidate.** The owner confirms that
+0.2.0 (2) installed on an iPhone, but reports that it does not yet provide useful
+behavior. No physical-device diagnostic dump has been captured. The cause is
+therefore still unconfirmed. This candidate adds observed input/DSP/GPU counters,
+bounded error history, an explicit **Copy Diagnostic Dump** action, a silent
+analytical self-test, and a **0–24 kHz** Waterfall option. Native validation and
+delivery of this candidate are pending; the successful runs below belong to
+the preceding release.
+
+The staged [project roadmap](docs/project/ROADMAP.md),
+[resumable checkpoint](docs/project/NEXT_SESSION.md), and
+[tracking issue](https://github.com/timelabs-npo/Rhea-RF-Spanner/issues/2) distinguish
+the current acoustic application from planned AR/LiDAR and external-probe work.
+
+**Previous release native validation passed:** the release signal core compiled, all **41 core
 tests** and **5 Simulator-hosted application tests** passed, and the iOS Simulator
 Debug and unsigned iOS device Release apps built successfully with Xcode 26.3.
 The hosted suite includes three renderer regressions for replaced spectra,
@@ -51,9 +65,9 @@ uploaded IPA and its hashes. Apple processing, TestFlight availability, and
 physical-iPhone acoustic validation are separate stages. App Store Connect
 subsequently confirmed processing as **VALID** and displayed build 2 as
 **Ready to Test** after assignment to **Rhea RF Spanner Internal**. That group
-has one build and one tester with status **Invited**. Invitation acceptance,
-iPhone installation, and physical-device acoustic validation have not been
-observed.
+was verified with one build and one invited tester. The owner subsequently
+confirmed installation and an initial test. Physical-device acoustic behavior
+has not yet passed a documented validation procedure.
 
 | Silent DEMO Field | Sample-spectrum Waterfall |
 | --- | --- |
@@ -87,7 +101,8 @@ This runs the Swift core tests and compiles both the simulator application and
 the unsigned device application. Logs go to `build/logs/`. The simulator can
 run the silent DEMO and Replay; LIVE acoustic capture requires a physical iPhone.
 `python3 scripts/capture_simulator.py` captures the actual native idle, DEMO,
-and Waterfall screens after the simulator build. CI retains these as artifacts.
+Waterfall, and Diagnostics screens after the simulator build. CI retains these
+as artifacts.
 
 For portable core work on Swift 6-capable macOS or Linux:
 
@@ -114,6 +129,19 @@ does not need a local laptop or to copy source code from chat.
    phase; recovery establishes a new reference without bridging the gap.
 5. Stop at any time. Select **REPLAY** to inspect retained slices and their
    original LIVE/DEMO labels. No microphone or tone runs during Replay.
+6. Open **Diagnostics** to inspect observed callbacks, input RMS/peak, processed
+   frames, GPU completions, and retained operational events. Run the silent core
+   self-test to check an analytical fixture without starting audio. **Inspect
+   JSON report** previews the aggregate report; **Copy Diagnostic Dump** copies
+   it locally only when you explicitly request it.
+
+The ordinary launch uses **Full audio · 0–24 kHz Waterfall** so incoming sound
+can be inspected even when a valid ultrasonic phase is unavailable. The carrier
+view remains selectable. Changing the displayed frequency range does not change
+acquisition: LIVE still emits the selected tone. **MIC SESSION** means that the
+audio session is active; the separate observed-input status confirms whether
+accepted callbacks are arriving. A LIVE input or processing stall stops the
+session with a retained reason rather than silently remaining active.
 
 The app stops when it loses foreground activity, audio is interrupted, the route
 changes, or audio services reset. It never automatically restarts after these
@@ -132,8 +160,13 @@ and stop if it is uncomfortable. Start with low device volume.
 Microphone samples are processed in volatile memory. Up to 2,048 derived
 telemetry slices and their bounded companion spectra are retained in memory for
 Replay; raw audio is not recorded. Closing the process loses the tape. There is
-no file-export UI, account, server, telemetry SDK,
-advertising, remote configuration, background audio mode, or downloaded code.
+no raw-audio or Replay export UI, account, server, telemetry SDK, advertising,
+remote configuration, background audio mode, or downloaded code. Diagnostics
+can be previewed as JSON and copied explicitly. The report contains aggregate
+statistics and bounded operational events, not audio samples, spectrum arrays,
+images, route identifiers, or absolute boot/host timestamps. The device-local
+clipboard copy expires after one hour and may outlive the app process. It is
+not transferred through Handoff; a copy pasted elsewhere has its own lifetime.
 The privacy text is available in the app without microphone permission. The
 source privacy policy is [docs/PrivacyPolicy.md](docs/PrivacyPolicy.md).
 
@@ -151,7 +184,7 @@ in this source repository.
 | `Package.swift` | Swift 6 package manifest for the reusable signal core |
 | `Sources/RheaRFCore/` | Z96 reference, SPSC queue, phase fit, FFT, deterministic simulator, 64-byte codec, Replay tape |
 | `Tests/RheaRFCoreTests/` | Numerical, transport, spectrum, simulation, codec, Replay, and concurrency tests |
-| `AppTests/` | Simulator-hosted mode, retune, display isolation, Replay, and foreground lifecycle checks |
+| `AppTests/` | Simulator-hosted lifecycle, renderer, diagnostics, report, and self-test checks |
 | `Config/` | Build settings and signing override example |
 | `scripts/` | Reproducible project generation, builds, archive/export, publication guard |
 | `docs/` | Signal model, architecture, review letter, review steps, privacy, validation |
@@ -190,9 +223,9 @@ local CSR, completes an Apple-issued certificate with its existing Windows key,
 and stores an encrypted recovery copy without printing private key material or
 passwords. Signed export and Apple validation/upload have completed for
 **0.2.0 (2)**. Apple processing and tester availability remain separate stages;
-processing is confirmed, and one internal tester is **Invited** to the group
-containing the **Ready to Test** build. Acceptance and installation remain
-unconfirmed.
+processing is confirmed, the internal group contains the **Ready to Test** build,
+and the owner reports successful installation. This confirms delivery, not
+physical measurement accuracy or a resolution of the reported LIVE problem.
 See the [upload validation record](docs/TESTFLIGHT_UPLOAD_VALIDATION.md).
 
 See [AppleSubmission.md](docs/AppleSubmission.md),
