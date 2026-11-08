@@ -561,7 +561,7 @@ private final class SpatialARSession: SpatialContextSession {
         configuration.worldAlignment = .gravity
         configuration.providesAudioData = false
         configuration.planeDetection = []
-        configuration.sceneReconstruction = .none
+        configuration.sceneReconstruction = []
         configuration.userFaceTrackingEnabled = false
         configuration.isAutoFocusEnabled = true
         configuration.environmentTexturing = .none

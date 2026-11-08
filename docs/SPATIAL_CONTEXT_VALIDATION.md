@@ -67,13 +67,23 @@ Depth remains a patch value in meters from the camera plane, with categorical
 confidence; it is not a source location or a calibrated error bound. See
 [Apple's ARDepthData description](https://developer.apple.com/documentation/arkit/ardepthdata).
 
-## Native gate — pending
+## Native gate — first compile finding corrected, rerun pending
 
-Before any app wiring, record the exact public source, native run, actual core
-and hosted counts, build outcomes and remaining findings here. The required
-gate compiles Core Release, Simulator Debug and unsigned device Release,
-executes the existing G1 regressions plus spatial fixtures, and verifies native
-capture readiness. No native pass is claimed at this checkpoint.
+[Native run 42441755655](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42441755655)
+checked exact public source `6a364a96acb06064a2a8fa43e87e4ce8eaa92477`.
+Core Release compiled and **85 core tests passed with zero failures**, including
+the 17 spatial policy tests. Simulator compilation stopped at
+`SpatialContextController.swift:564`: `sceneReconstruction = .none` is
+unavailable for that option set. Unsigned device compilation, native captures
+and hosted tests did not execute in this run.
+
+The correction uses the empty option set `sceneReconstruction = []`. Review
+confirmed adjacent option-set assignments already use array literals;
+`environmentTexturing = .none` is an enum case and remains unchanged. Native
+validation of this correction is pending. The required gate compiles Simulator
+Debug and unsigned device Release, executes the existing G1 regressions plus
+spatial fixtures, and verifies native capture readiness. No complete native
+pass is claimed at this checkpoint.
 
 ## Integration and physical gate — not executed
 
