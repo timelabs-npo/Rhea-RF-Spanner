@@ -85,6 +85,22 @@ Debug and unsigned device Release, executes the existing G1 regressions plus
 spatial fixtures, and verifies native capture readiness. No complete native
 pass is claimed at this checkpoint.
 
+[Run 42442191065](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42442191065)
+then checked correction `c4d0b56d606abc2999f0154a14ac01c22670eaa6`.
+Core Release, Simulator Debug and unsigned device Release compiled, and
+**85 core tests passed with zero failures**. Capture stopped before app launch:
+the prelaunch `simctl terminate` command timed out after 90 seconds and cleanup
+after another 10 seconds. No screenshot or hosted-test pass is claimed. Artifact
+`13602681092`, SHA-256
+`a0db392fbb5f9969c6d114aa345efacba26abc3fe0f21870a69b7588645b0289`,
+preserves the failure logs. This does not identify a spatial runtime fault.
+
+The next amendment adopts G1's bounded command-failure reporting and
+geometry-aware recognition for the native-observed wrapped Start title. It
+keeps the cold-idle order and the 45-second readiness deadline. Ten Python
+recognition regressions are separate from the Swift test counts. Full native
+capture and hosted spatial validation remain pending for that amendment.
+
 ## Integration and physical gate — not executed
 
 The coordinator proposal in [SPATIAL_CONTEXT.md](SPATIAL_CONTEXT.md) remains a
