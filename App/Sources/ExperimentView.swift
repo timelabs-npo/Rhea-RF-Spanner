@@ -676,12 +676,19 @@ struct ExperimentView: View {
                 .foregroundStyle(subdued)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            if model.diagnosticSnapshot.pipeline.health == "inputStalled"
-                || model.diagnosticSnapshot.pipeline.health == "processingStalled" {
+            if hasPipelineStall {
                 Button("Inspect pipeline diagnostics") { showDiagnostics = true }
                     .font(.caption.weight(.semibold))
             }
         }
+    }
+
+    private var hasPipelineStall: Bool {
+        let snapshot = model.diagnosticSnapshot
+        return snapshot.pipeline.health == PipelineHealth.inputStalled.rawValue
+            || snapshot.pipeline.health == PipelineHealth.processingStalled.rawValue
+            || snapshot.session.stopReason == ExperimentStopReason.inputStalled.diagnosticCode
+            || snapshot.session.stopReason == ExperimentStopReason.processingStalled.diagnosticCode
     }
 
     private func transportAction() {

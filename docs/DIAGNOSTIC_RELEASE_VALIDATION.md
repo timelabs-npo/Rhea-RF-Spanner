@@ -18,6 +18,7 @@ capture, external probes or inter-device synchronization.
 - Starting main: `4be8724f244cd2e478f5d6877f798986fcaa2ae9`.
 - Initial candidate: `ca4442415728cbf4f3e1721b8b1e5015a0cebc57`.
 - Independent-review corrections: `d5425d10c686575a8ad95021b9bd5120a3db5765`.
+- Latest native-verified G0 source: `722ee840ae8f72d01cec0a3016fa8f52320726c4`.
 - Review branch: [PR #3](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/3).
 - Project tracking: [issue #2](https://github.com/timelabs-npo/Rhea-RF-Spanner/issues/2).
 
@@ -26,6 +27,13 @@ statistics, health-state evaluation, a bounded log, tests and documentation. It
 exited 0 after 433.57 seconds. A separate read-only Codex review of the exact
 initial candidate exited 0 after 214.67 seconds. Session IDs and complete outputs
 are retained on WD; their existence is not treated as proof of compilation.
+
+All three WD Codex sessions have completed. The separate G1 Listen implementation
+session `01a1b8d8-4802-7141-b421-899b250ca717` exited 0 after 674.7667 seconds at
+`2026-11-08T02:00:18Z` (05:00:18 Europe/Moscow). Its work was imported into an
+isolated G1 integration tree and received independent review corrections. G1
+targets **0.2.2 (4)**; its native validation remains pending and is separate from
+the G0 evidence below.
 
 The Windows/WSL attempt to run Swift stopped with `swift: Permission denied`
 before compilation. No Swift, Simulator, Metal-runtime or device test pass is
@@ -78,16 +86,52 @@ narrow status card. Those lines were moved into a separate full-width strip.
    sendable closure. An explicit main-actor reference fixture replaces that
    captured variable without changing production code or test count.
 5. Actual capture exposed the truncated main-screen input readout. The layout
-   correction is subject to the final native visual check.
+   correction was visually confirmed in the next native Waterfall capture.
+
+## Second native run and visual confirmation
+
+[Run 42436184984](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42436184984)
+**succeeded** for `722ee840ae8f72d01cec0a3016fa8f52320726c4`.
+The actual logs record **63 core tests and 16 Simulator-hosted tests, with zero
+failures**. Core Release, iOS Simulator Debug, and unsigned iOS device Release
+builds passed. All four native PNG captures succeeded. The coordinator visually
+inspected the Waterfall PNG and confirmed that the full-width input readout is
+now legible.
+
+Artifact ID: `13598909772`; SHA-256:
+`8f035b1ed24a7ec3e8f01c4d87480d89b0f0cd5251c07bf3ef245be4253a3838`.
+A copy was retained on WD. These results validate the named software candidate,
+not microphone/speaker behavior on a physical device.
+
+## Subsequent review findings
+
+A new Copilot review identified four follow-ups after that successful run:
+
+- Selectable JSON permits a copy path outside the explicit Copy action's
+  locality and expiration settings.
+- The first callback-rate window needs a consistent startup counter baseline.
+- Troubleshooting information is hidden after acquisition stops.
+- Microphone-watchdog integration needs targeted regression coverage.
+
+The corrections now disable JSON selection, retain the troubleshooting shortcut
+after a stall, and baseline the first rate window against the callbacks already
+observed during startup. Five model regressions cover that baseline, absent
+input, late-input processing grace, healthy real ring/DSP flow, and processing
+that stops while input callbacks continue. A supplied clock and recording audio
+adapter exercise the production model's watchdog/stop path without opening
+hardware; production permission and explicit-start rules are unchanged.
+
+The amended source requires its own exact-candidate native CI run before merge
+or upload; the successful `722ee840` run does not validate these later changes.
 
 ## Final candidate and delivery
 
-The latest review/layout corrections still require their exact native CI run.
-An earlier commit's success is not a pass for those amendments. Update this
-section with the final source SHA, test counts, inspected captures and run URL
-before merging or dispatching distribution.
+The latest verified source is `722ee840ae8f72d01cec0a3016fa8f52320726c4`.
+The subsequent review corrections remain the release gate. Record their final
+source SHA, actual CI results, inspected captures and run URL before merging or
+dispatching distribution; do not substitute an earlier commit's pass.
 
-No 0.2.1 (3) signing/upload has been dispatched at this checkpoint. A read-only
+No 0.2.1 (3) upload has been dispatched at this checkpoint. A read-only
 App Store Connect check at `2026-11-08T01:43:07Z` found only 0.2.0 (2), processed
 as VALID. It confirmed the existing internal tester group and existing API
 credential access without creating a new key or a cleartext key file.

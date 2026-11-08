@@ -191,7 +191,7 @@ struct DiagnosticsView: View {
                     ScrollView {
                         Text(reportText)
                             .font(.caption.monospaced())
-                            .textSelection(.enabled)
+                            .textSelection(.disabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding()
                     }

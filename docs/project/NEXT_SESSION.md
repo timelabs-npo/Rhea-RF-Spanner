@@ -32,6 +32,12 @@ the phone itself. Fix defects for which the code or a reproduction supplies
 evidence. Preserve a clear route to passive audio and later spatial/external
 sources, without adding them all to this build.
 
+The immediate gate is now the four follow-ups from the latest Copilot review:
+JSON-preview copy behavior, the first callback-window baseline, troubleshooting
+after Stop, and microphone-watchdog coverage. Complete those corrections and
+validate their exact source before merging or uploading G0. G1 Listen remains
+an isolated **0.2.2 (4)** candidate with native validation pending.
+
 1. Confirm the current remote head and isolated working tree. Read any project
    instructions, the latest checkpoint, and changed files before editing.
 2. Inspect the existing audio, DSP, main-actor, and Metal boundaries. Classify
@@ -71,24 +77,26 @@ a later stage is still pending. Do not fill a field from expectation.
 
 | Field | Latest checkpoint |
 | --- | --- |
-| Observed at | `2026-11-08T04:52:57+03:00` (Europe/Moscow) |
-| Coordinator / session | ChatGPT coordinator; bounded WD Codex implementation completed |
+| Observed at | `2026-11-08T05:18:57+03:00` (Europe/Moscow) |
+| Coordinator / session | ChatGPT coordinator; all three bounded WD Codex implementation/review sessions completed |
 | Active objective / gate | G0 diagnostics and LIVE repair |
 | Remote base at session start | `4be8724f244cd2e478f5d6877f798986fcaa2ae9`; refresh before editing |
-| Working branch / exact commit | `work/diagnostics-0.2.1`; initial `ca4442415728cbf4f3e1721b8b1e5015a0cebc57`, review fixes `d5425d10c686575a8ad95021b9bd5120a3db5765`; final layout/test-fixture correction pending |
-| Working directory / owner | Isolated integration worktree; coordinator owns publication, other writers have finished |
+| Working branch / exact commit | `work/diagnostics-0.2.1`; latest native-verified source `722ee840ae8f72d01cec0a3016fa8f52320726c4`; subsequent review-fix commit not yet recorded |
+| Working directory / owner | Isolated G0 integration worktree; coordinator owns publication, assigned follow-up corrections are in progress. G1 remains in a separate integration tree |
 | Changed paths / uncommitted work | App diagnostic UI and runtime, renderer, portable diagnostics/self-test, hosted/core regressions, generated project, version configuration, English docs |
 | Confirmed defect and reproduction | Static audit: startup status claimed activity before input, fixed nominal rate label, silent renderer failures, no preserved stage evidence. No hardware root cause established |
 | Hypotheses still open | Physical-device failure mechanism; no diagnostic report yet |
 | Implemented changes | Measured stage counters, bounded event log, local JSON preview/copy, silent analytical self-test, LIVE stall stop reason, full-band Waterfall with peak-preserving downsampling |
-| Automated validation / run URLs | Initial [run 42435212237](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42435212237): 61 core + 13 hosted tests passed, both iOS builds and four native captures passed. Exact amended-source run pending; see [validation record](../DIAGNOSTIC_RELEASE_VALIDATION.md) |
-| Independent review / examined commit | Separate local integration review and WD Codex review of exact `ca4442415728cbf4f3e1721b8b1e5015a0cebc57`; event clocks, Unicode byte caps, delayed GPU accounting and privacy wording addressed |
+| Automated validation / run URLs | Latest [run 42436184984](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42436184984) succeeded for `722ee840`: 63 core + 16 hosted tests, zero failures; core Release, Simulator Debug, unsigned device Release, and four native PNGs passed. Waterfall visually inspected; full-width input readout is legible. Subsequent review fixes require another exact-source run; see [validation record](../DIAGNOSTIC_RELEASE_VALIDATION.md) |
+| Retained artifact | `13598909772`, SHA-256 `8f035b1ed24a7ec3e8f01c4d87480d89b0f0cd5251c07bf3ef245be4253a3838`; copied to WD |
+| Independent review / examined commit | Earlier WD review of `ca444241` led to event-clock, Unicode-cap, GPU-timing and privacy corrections. Copilot findings after the `722ee840` pass are corrected locally: JSON preview selection disabled, callback-window baseline fixed, troubleshooting retained after Stop, and five model regressions added. Exact amended-source native CI remains required |
 | Candidate version / build | intended `0.2.1` / `3`; verify before dispatch |
-| Apple validation / upload / processing | pending for the new candidate |
+| Apple validation / upload / processing | No 0.2.1 (3) upload dispatched; pending for the amended candidate |
 | TestFlight group / tester state | pending for the new candidate |
 | Physical-device observations | Installation/testing of build 2 reported; candidate checks pending |
-| Running jobs / session IDs / last checked | WD diagnostic implementation and independent review completed. A new isolated WD Codex G1 Listen implementation session is running; its live status and session ID are retained in the WD checkpoint. Coordinator owns its later review/publication. Final G0 CI remains the immediate release gate |
-| Blocker / smallest next action | Obtain a useful diagnostic report after the candidate is installed |
+| Running jobs / session IDs / last checked | The three initial WD Codex sessions completed. G1 implementation `01a1b8d8-4802-7141-b421-899b250ca717` exited 0 after 674.7667 seconds at 05:00:18 Europe/Moscow. A subsequent read-only WD Codex review of its 19-file delta started at `2026-11-08T02:15:44.4921467Z`; inspect `passive-review-022-state.json` before resuming. G1 native validation is pending. G0 follow-up corrections are ready for publication; no amended CI run is recorded yet |
+| G1 candidate | Intended **0.2.2 (4)**, true Listen/Tone separation; isolated from G0, not natively verified or delivered |
+| Blocker / smallest next action | Complete the four G0 review follow-ups, record the amended SHA, and run exact-candidate CI before merge/upload; then collect a short physical-device diagnostic report |
 
 Use explicit time zones in evidence. Machine logs can retain UTC; user-facing
 status times are shown in **Europe/Moscow**. Never update a timestamp merely
