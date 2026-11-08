@@ -9,10 +9,14 @@ registration are recorded separately in
 [the validation record](SPATIAL_CONTEXT_VALIDATION.md). The module is
 **not an integrated or validated app feature**.
 
-No Swift/Xcode toolchain is available on WD. No Swift build, XCTest execution,
-Simulator run, device capture, native cleanup or simultaneous microphone/camera
-success is claimed. G1 native review and physical Listen evidence remain separate
-prerequisites. The coordinator owns integration and native validation after review.
+The original WD implementation session had no Swift/Xcode toolchain and did not
+execute native tests. Later coordinator Mac CI compiled Core, Simulator and
+device targets and passed 85 core tests; the exact runs and Simulator-control
+failures are in [the validation record](SPATIAL_CONTEXT_VALIDATION.md).
+Hosted spatial execution and physical microphone/camera operation remain
+unverified at this checkpoint. G1's completed software/distribution gate does
+not establish physical Listen acceptance or validate this separate module.
+The coordinator owns the subsequent app integration and exact-source validation.
 
 ## Implemented boundaries
 

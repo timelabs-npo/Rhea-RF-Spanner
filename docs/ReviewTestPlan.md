@@ -1,12 +1,18 @@
 # Review and physical-device test plan
 
-This is a protocol for the **0.2.1 (3) diagnostic candidate**, **not a record of successful tests or delivery**. Compilation, simulator execution, and physical acoustic measurements are separate forms of evidence. Mark a test as passed only after observing it in the specific build being evaluated.
+This is the test protocol for **0.2.2 (4), G1 passive audio**, including the
+applicable G0 diagnostic regressions. It is not a record that every step below
+passed or that the build is available to testers. Compilation, Simulator
+fixtures and physical acoustic measurements are separate forms of evidence.
+Mark a test as passed only after observing it in the specific build evaluated.
 
-This revision also describes the bounded G1 passive-audio source change without
-assigning it a release number or changing G0 release evidence. Native Swift/Xcode
-is absent on the WD implementation host. G1 compilation, Mac CI, Simulator
-execution, and physical-device tests have not passed here. The phone owner's P4
-gate remains pending. See [PASSIVE_AUDIO.md](PASSIVE_AUDIO.md) for its contract.
+Source `222caea29b040063658cad2288b2e02726d02c73` passed native builds, core and
+hosted suites, and four inspected idle/DEMO captures on Mac CI. Exact results
+and TestFlight stages are in [PASSIVE_AUDIO_VALIDATION.md](PASSIVE_AUDIO_VALIDATION.md).
+Signed upload succeeded; Apple confirmed build VALID / upload COMPLETE at
+`2026-11-08T03:51:37Z`. Tester access remains blocked pending explicit
+authorization; physical P4 is
+unobserved. See [PASSIVE_AUDIO.md](PASSIVE_AUDIO.md) for the measurement contract.
 
 ## App Review navigation
 

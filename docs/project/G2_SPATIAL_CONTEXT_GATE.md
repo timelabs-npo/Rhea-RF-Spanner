@@ -1,9 +1,12 @@
 # G2: camera and spatial context for passive audio
 
-**Status: design only — 2026-11-08.** Prepared against the Rhea RF Spanner
-roadmap and the current G1 worktree. G1 targets 0.2.2 (4); its source review and
-native validation are separate work. No G2 sensor implementation, version,
-build, delivery, or hardware result is claimed here.
+**Integration design — 2026-11-08.** Originally prepared against the Rhea RF
+Spanner roadmap and the G1 worktree. The separate G2a module is now an unwired
+draft; its actual source and execution evidence are in
+[SPATIAL_CONTEXT_VALIDATION.md](../SPATIAL_CONTEXT_VALIDATION.md).
+G1 0.2.2 (4) has passed its software and Apple processing gates; physical
+acceptance remains open. This design does not establish G2 app integration,
+delivery, simultaneous sensor operation or capture-time association.
 
 ## Decision: context first, verified association next
 
@@ -110,7 +113,7 @@ compilation; `@unchecked Sendable` is not a substitute for that ownership model.
 | Value | Meaning and lifetime |
 | --- | --- |
 | `spatialRunID`, `coordinateEpoch`, `frameSequence` | App-local identifiers; no device identity. Every explicit context start gets a fresh run. |
-| `arCaptureElapsedSeconds` | AR timestamp minus this AR run's first timestamp, still labelled **AR capture clock**. It is not yet comparable to audio-run elapsed time. |
+| `arCaptureElapsedSeconds` | AR timestamp minus this AR run's first valid AR timestamp, still labelled **AR capture clock**. It is not yet comparable to audio-run elapsed time. |
 | `receivedElapsedSeconds` | Relative arrival time on the app's own monotonic interval clock; diagnostic scheduling evidence only. |
 | `worldFromCamera`, tracking state/reason | AR camera pose estimate for this frame and epoch. A finite transform alone does not make tracking valid. |
 | `depthSummary?` | Frame-associated image-center depth, confidence/category, valid sample count, and unavailable reason. No depth buffer is retained. |

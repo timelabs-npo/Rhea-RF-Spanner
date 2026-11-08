@@ -12,13 +12,13 @@ Project priorities and stage gates are in [ROADMAP.md](ROADMAP.md).
 | Project | `timelabs-npo/Rhea-RF-Spanner` only; unrelated Rhea v2 work is outside scope |
 | Planning base | `4be8724f244cd2e478f5d6877f798986fcaa2ae9` on `main` |
 | Installed release | User reports installing and testing **0.2.0 (2)** |
-| Release application source | `9bed85a1787aafabd919994e38eae66d3169c448` |
+| Installed release application source | `9bed85a1787aafabd919994e38eae66d3169c448` |
 | Published delivery evidence | [TestFlight upload and processing report](../TESTFLIGHT_UPLOAD_VALIDATION.md) |
 | Reported defect | “Not working”; crash, stall, empty data, unusable controls, and weak physical signal have not yet been distinguished by a device trace |
 | Debugging brief | Read `debugging.txt`; it calls for an in-app console, diagnostic JSON, stage statistics, synthetic self-test, and independent review |
 | Uploaded diagnostic build | **0.2.1 (3)** processed as VALID; tester-group assignment is blocked pending explicit access authorization |
 | Active project gate | **G1: useful passive audio**, with G0 physical fault confirmation still open |
-| Intended next candidate | **0.2.2 (4)**; amended-source validation and distribution pending |
+| G1 software / distribution | **0.2.2 (4)** passed final native validation and merged to main; the single TestFlight run succeeded. Apple confirmed build VALID / upload COMPLETE at 2026-11-08T03:51:37Z; tester access is blocked and physical acceptance remains unobserved |
 | Hardware evidence needed | A diagnostic capture from the installed candidate, including the selected mode, route, actual format, advancing stage counters, and any stop/error reason |
 
 The brief is not proof of its general claims about agent performance or the
@@ -28,39 +28,43 @@ for physical installation only; it does not establish measurement accuracy.
 
 ## Next bounded objective
 
-Finish the reviewed G1 passive-audio candidate while preserving G0's physical
-diagnostic question. G0's four review follow-ups passed final native validation,
-PR #3 merged, and **0.2.1 (3)** uploaded and processed as VALID. Internal tester
-access was not granted: automatic approval review rejected that action because
-upload authorization did not explicitly cover the recipient access scope.
+Preserve the completed G1 delivery evidence and resolve tester access before
+physical acceptance. The single TestFlight run succeeded, its signed IPA/archive
+hashes are verified, and App Store Connect confirmed build VALID / upload
+COMPLETE at `2026-11-08T03:51:37Z`, with empty errors/warnings/infos. Final G1
+source `222caea2` passed 68 core,
+34 hosted and 10 separate Python recognition tests, native builds and all four
+inspected captures. PR #4 merged with identical tracked blobs/modes. Do not
+dispatch a duplicate upload or repeat native CI solely for this documentation
+update. The earlier launch/capture failures remain in the evidence record.
+
+G0 **0.2.1 (3)** already uploaded and processed as VALID. Internal tester access
+was not granted: automatic approval review rejected that action because upload
+authorization did not explicitly cover the recipient access scope.
 **Do not retry group assignment without explicit authorization for that grant.**
 
-G1 source `f8d1eed0` passed 68 core and 33 hosted tests. Its generated idle PNG
-was black except for the status bar; the DEMO Diagnostics PNG was populated.
-Resolve capture readiness versus startup failure, finish the diagnostic timing
-flags correction, and validate the amended source. The earlier pass does not
-cover those amendments. G2a's separate new-files-only WD session has completed;
-its hash-verified output is under independent review in an isolated tree. It is
-not an integrated live app capability or delivered build.
+Physical G1 remains unobserved. A successful idle/DEMO capture does not settle
+the original device report. G2 is a separate unwired draft in PR #5. Its latest
+run passed core/build checks but timed out while booting Simulator before app
+launch; its hosted tests did not execute. Keep its isolated Simulator-control
+correction and native validation outside the G1 release.
 
 1. Confirm the current remote head and isolated working tree. Read any project
    instructions, the latest checkpoint, and changed files before editing.
-2. Inspect the current timing-report and capture-readiness amendments. Resolve
-   the blank idle capture with evidence before attributing it to capture timing
-   or application startup.
-3. Review the amended source and targeted regressions. Preserve the distinction
-   between input-only Listen, explicit Tone and silent synthetic DEMO.
-4. Review the existing G2a output and its independent findings before starting
-   any replacement. Keep the module's native validation separate from G1 delivery.
-5. Run the relevant core tests and native CI for the exact candidate. Record
-   commands, commit/run identities, actual results, and unexecuted checks.
-6. Review the complete candidate independently, including source provenance,
-   callback work, privacy text, and the release/build identifiers.
-7. Deliver a ready candidate through the authorized signing/upload workflow.
-   Record Apple validation, upload, processing, tester access and phone
-   observations separately. The rejected tester-group access action is not
-   authorized by a successful upload; leave it blocked until explicitly approved.
-8. Leave a checkpoint with the next diagnostic question. If a physical-device
+2. Preserve the successful run **42443912311**, verified release artifact and
+   payload hashes, and Apple VALID / COMPLETE records for
+   `4f5ba9b4-32e9-4189-9658-62cec90fb8ff`. Do not repeat the completed upload or
+   confuse Apple processing with authorization to grant tester access.
+3. Preserve the final G1 native source and its merge equivalence. Publish the
+   scoped documentation update through the coordinator without changing the
+   validated application source or claiming new hardware evidence.
+4. Keep tester assignment blocked until explicitly authorized. After authorized
+   access and installation, obtain the smallest physical Listen diagnostic run
+   described in [PASSIVE_AUDIO.md](../PASSIVE_AUDIO.md).
+5. Review G2's isolated Simulator-control correction, then validate that draft's
+   exact source. Preserve its original 480-second boot timeout and unexecuted
+   hosted stage; do not attribute a G1 pass to G2.
+6. Leave a checkpoint with the next diagnostic question. If a physical-device
    observation is required, retain that blocker and progress a separate planned
    design/fixture task instead of manufacturing a hardware result.
 
@@ -84,28 +88,29 @@ a later stage is still pending. Do not fill a field from expectation.
 
 | Field | Latest checkpoint |
 | --- | --- |
-| Observed at | `2026-11-08T05:50:53+03:00` (Europe/Moscow); evidence times below identify the individual observations |
-| Coordinator / session | ChatGPT coordinator; G0/G1 WD implementation/review sessions completed; separate G2a WD implementation completed, independent review underway |
-| Active objective / gate | G1 amended-source review/native validation; G0 tester access and physical fault confirmation remain open |
+| Observed at | `2026-11-08T06:53:07+03:00` (Europe/Moscow); evidence times below identify the individual observations |
+| Coordinator / session | ChatGPT coordinator; G0/G1 WD implementation/review sessions completed; G2 reviewed draft has separate Simulator-control work underway |
+| Active objective / gate | G1 uploaded and Apple-processed; tester access and physical fault confirmation remain open |
 | Remote base at session start | `4be8724f244cd2e478f5d6877f798986fcaa2ae9`; refresh before editing |
-| Working branch / exact commit | G1 PR #4 / `work/passive-audio-0.2.2`, tested head `f8d1eed0aaf3f2d8e195bdd2424f183d0b472c03`; current amendments have no recorded final SHA yet. G0 PR #3 merged main at `3f7716` |
-| Working directory / owner | Separate G1 integration worktree; runtime, capture and documentation owners work within assigned paths; coordinator owns integration, publication and native validation |
-| Changed paths / uncommitted work | Diagnostic timing flags, capture-readiness investigation/correction and evidence documentation; inspect the actual worktree before resuming |
-| Confirmed defect and reproduction | Static audit: startup status claimed activity before input, fixed nominal rate label, silent renderer failures, no preserved stage evidence. No hardware root cause established |
-| Hypotheses still open | Physical-device failure mechanism; no diagnostic report yet |
-| Implemented changes | Input-only Listen, input statistics/spectrum independent of tone, captured-duration cap, no fabricated phase/Replay, retained stopped history and current output gate; G0 watchdog/copy fixes integrated |
-| Automated validation / run URLs | Final G0 `d4903b847e610761a4d9c7f94ee58e889a4d6d31` passed 63 core + 21 hosted tests and native builds in [run 42438050312](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438050312). G1 `f8d1eed0` passed 68 core + 33 hosted tests and native builds in [run 42438775739](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438775739); current amendments require a new exact-source run |
-| Retained artifact | G1 `13600767219`, SHA-256 `9b5fff5e4564eedafda88abc0fc7c721829b5719eca8558e6798a5ee2470573b`, reported expiry 2026-11-15. Its name uses PR merge SHA `463462c20603b10e498edd5389832a8d0eb9fd86`; verified source head is `f8d1eed0`. Earlier G0 artifact identities remain in [the G0 evidence record](../DIAGNOSTIC_RELEASE_VALIDATION.md) |
-| Inspected captures | G1 generated four PNGs. Idle was black except for the status bar; DEMO Diagnostics showed healthy synthetic processing, RMS approximately −23 dBFS, peak 0.1034, zero mic callbacks, and app tone gate disabled. Idle readiness/startup cause remains unresolved |
-| Independent review / examined commit | WD review of the hash-verified G1 delta over `722ee840` found missing-current-spectrum substitution; correction and regression integrated. Later Copilot review found diagnostic timing flags omitted. Current correction is not covered by the `f8d1eed0` pass |
-| Candidate version / build | G0 **0.2.1 (3)** uploaded/processed, tester access blocked; G1 **0.2.2 (4)** amended-source validation and distribution pending |
-| Apple validation / upload / processing | G0 [upload run 42438984196](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438984196) succeeded. ASC build `fbe064d5-c57a-4853-9d40-c0a64b1d3705` observed `2026-11-08T02:39:50Z`: processing `VALID`, upload `COMPLETE`, errors `[]`, warnings `[]` |
-| TestFlight group / tester state | **0.2.1 (3) not assigned** to Rhea RF Spanner Internal. Automatic approval review rejected the access grant because recipient scope was absent from upload authorization. Do not retry without explicit approval for that access |
+| Working branch / exact commit | G1 tested public source `222caea29b040063658cad2288b2e02726d02c73`; PR #4 merged main `dff7c9f7fa99e1df07d8844f7546427119eb1a9e`. All 133 tracked blob hashes and modes match. Local mirror history differs from public history and must not be pushed |
+| Working directory / owner | G1 documentation worktree; coordinator owns main publication and distribution. G2 code and Simulator-control work remain isolated |
+| Changed paths / uncommitted work | Documentation only: README, passive contract/evidence, checkpoint, ReviewTestPlan introduction and AppReviewLetter introductory status; inspect the worktree before resuming |
+| Confirmed defect and reproduction | G0 stage observability defects repaired. Simulator inspection reproduced an off-screen Start action, corrected by the bottom dock; wrapped-label capture rejection corrected and natively verified. No physical-device root cause established |
+| Hypotheses still open | Original physical-device failure mechanism; original d371 attempt-1 launch/cleanup timeout cause. Later successful UI capture does not establish either cause |
+| Implemented changes | Input-only Listen, independent levels/spectrum, captured-duration cap, no fabricated phase/Replay, retained stop evidence/current output gate, timing flags in diagnostics, visible Start/Stop dock and strict capture readiness |
+| Automated validation / run URLs | G1 [run 42443019975](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443019975), attempt 1, job 128616065718: **68 core + 34 hosted**, 0 failures; **10 separate Python tests**; Core Release, Simulator Debug, unsigned device Release and native Vision-helper compilation passed. Separate Python/Actions CodeQL checks succeeded. Historical G0 and failed G1 attempts remain in their evidence records |
+| Retained artifact | G1 `13602418489`, name `rhea-rf-spanner-build-68044aaac4877d4d5d56c099068a2d94b06c65e8-attempt-1`, SHA-256 `a4cd2be370597dd6d7eea37b271bf427861bdbed12ff441c49bed71ab1d0a5ca`, expiry 2026-11-15. Download/hash verified on WD at `C:\Users\wheel\RheaWork\ci-42443019975` |
+| Signed release artifact | `13602429233`, name `rhea-testflight-222caea29b040063658cad2288b2e02726d02c73-build-4`, SHA-256 `d230f9626b1e0e87f8fce8aed2e0be513f40c3a36190747e03e142c6ded46662`, expiry 2026-11-11; downloaded/hash verified on WD at `C:\Users\wheel\RheaWork\release-0.2.2-4`. Actual IPA/archive hashes independently match the manifest; exact values and toolchain are in [PASSIVE_AUDIO_VALIDATION.md](../PASSIVE_AUDIO_VALIDATION.md) |
+| Inspected captures | All four final PNGs inspected: idle Start fully visible, LIVE Listen/MIC OFF/not started/hatched missing spectrum; DEMO Field caption and Stop visible; Waterfall synthetic spectrum with axes and Stop; Diagnostics healthy running DEMO, tone gate No, 0 mic callbacks. Full timing/level evidence is in [PASSIVE_AUDIO_VALIDATION.md](../PASSIVE_AUDIO_VALIDATION.md) |
+| Independent review / examined commit | Missing-spectrum substitution and diagnostic timing-flag findings corrected; layout and capture-readiness corrections included in tested `222caea2`. Native/visual evidence applies to that source and its verified identical merge |
+| Candidate version / build | G0 **0.2.1 (3)** uploaded/processed, tester access blocked; G1 **0.2.2 (4)** software gate passed/merged, uploaded and Apple-processed; tester access blocked |
+| Apple validation / upload / processing | G1 [run 42443912311](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443912311) dispatched **once**, succeeded; validation job 128618729126 and signing/upload job 128618751852 passed. Direct ASC observation at `2026-11-08T03:51:37Z`: build/upload `4f5ba9b4-32e9-4189-9658-62cec90fb8ff`, build 4, pre-release version `3fade264-4944-4c1d-acf1-c56b85e0a865` = 0.2.2 IOS, build VALID / upload COMPLETE, errors/warnings/infos empty. Earlier PROCESSING observation is retained in the evidence record. G0 previously observed VALID/COMPLETE in ASC build `fbe064d5-c57a-4853-9d40-c0a64b1d3705` at `2026-11-08T02:39:50Z` |
+| TestFlight group / tester state | New-build access assignment remains blocked. Automatic approval review rejected granting Rhea RF Spanner Internal access because recipient scope was absent from upload authorization. Do not retry without explicit approval for that access |
 | Physical-device observations | Installation/testing of build 2 reported; no build 3/4 device diagnostic report and no verified physical root cause |
-| Running jobs / session IDs / last checked | G0/G1 WD implementation/review sessions completed. G2a thread `01a1b901-b210-78c3-afdb-901b6e80e9f5` completed at **05:48:23 Europe/Moscow** (`2026-11-08T02:48:23.1998890Z`), exit 0 after 845.0827 seconds. Seven new files were transferred with per-file SHA-256 verification from frozen `f8d1eed0`; 39 tests are authored, not executed. Independent review and native validation remain |
-| G1 candidate | True Listen/Tone separation; `f8d1eed0` software pass retained, newest amendment and idle-capture finding pending, not delivered |
-| G2 status | [Future spatial-context design](G2_SPATIAL_CONTEXT_GATE.md); G2a implementation session is separate and unintegrated. No camera/AR/LiDAR capability has been delivered |
-| Blocker / smallest next action | Resolve G1 timing-report and idle-capture findings, run exact amended native CI, and retain G0 group-access approval boundary. Obtain a phone diagnostic report after authorized tester access |
+| Running jobs / session IDs / last checked | G1 TestFlight run 42443912311 completed successfully and Apple processing is confirmed VALID / COMPLETE. G2a WD thread `01a1b901-b210-78c3-afdb-901b6e80e9f5` completed at 05:48:23 Europe/Moscow, exit 0; its reviewed output is now separate PR #5. Runtime owner is preparing an isolated G2 fresh-Simulator control correction |
+| G1 candidate | True Listen/Tone separation; final native and visual gates passed at `222caea2`, merged to main; uploaded and Apple-processed; tester access blocked and physical behavior unobserved |
+| G2 status | Separate draft [PR #5](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/5), head `14adceda`: [run 42443083460](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443083460) passed **85 core tests**, native builds and **10 Python tests**, then Simulator boot timed out after 480 seconds before app launch. Hosted tests did not run. Control correction/native rerun pending; no delivered camera/AR/LiDAR capability |
+| Blocker / smallest next action | Preserve blocked tester access and do not duplicate the completed upload. After explicit access authorization and installation, obtain a phone diagnostic report. Continue G2 validation independently |
 
 Use explicit time zones in evidence. Machine logs can retain UTC; user-facing
 status times are shown in **Europe/Moscow**. Never update a timestamp merely

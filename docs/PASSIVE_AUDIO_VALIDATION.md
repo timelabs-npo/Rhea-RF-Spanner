@@ -1,5 +1,18 @@
 # Passive audio candidate 0.2.2 (4): evidence record
 
+## Current checkpoint
+
+Final G1 source `222caea29b040063658cad2288b2e02726d02c73` passed native
+validation, 68 core tests, 34 hosted tests and 10 separate Python recognition
+tests. All four captures passed readiness and were visually inspected. PR #4
+merged into main at `dff7c9f7fa99e1df07d8844f7546427119eb1a9e`; all 133
+tracked blob hashes and file modes match the tested source. The single
+TestFlight run for **0.2.2 (4)** succeeded: signing, Apple validation and upload
+passed. App Store Connect confirmed build **0.2.2 (4)** as VALID and the upload
+COMPLETE at `2026-11-08T03:51:37Z`. Tester access is blocked and physical G1 is
+unobserved.
+The failed attempts below remain part of the record.
+
 ## Intended result
 
 Ordinary LIVE entry selects **Listen**. After an explicit start and microphone
@@ -84,8 +97,9 @@ work recorded below.
 
 A subsequent Copilot review identified missing timing flags in the diagnostic
 report. That correction and capture-readiness work are not covered by the
-successful `f8d1eed0` run. Record the amended source and its own native evidence
-before merge or distribution. No 0.2.2 (4) upload has been dispatched.
+successful `f8d1eed0` run. Those amendments needed their own native evidence
+before merge or distribution. No 0.2.2 (4) upload had been dispatched at that
+checkpoint.
 
 The amendment forwards both observed timing flags through Tone diagnostics and
 adds a ring-to-analysis-to-JSON regression distinguishing unavailable timestamps
@@ -177,28 +191,127 @@ was preserved on WD under `ci-42441531458-attempt2`.
 Both attempts' artifacts were retained under distinct IDs despite sharing an
 artifact name. The IDs and separate archive directories preserve their identity.
 
-### Capture-only amendment pending
+### Capture-tooling correction
 
-The next amendment is limited to capture tooling, artifact naming and focused
-Python tests. It adds strict bounding-box-aware recognition of a wrapped action
-label, bounded failure evidence and names that distinguish run attempts. Its
-final source SHA and native results are not yet recorded. The amendment must
-still reject unrelated words, a hidden action and a blank screen; neither the
-earlier core/build successes nor visual inspection of one idle PNG substitutes
-for its native capture and hosted-test gate. **0.2.2 (4) has not been uploaded.**
+The subsequent amendment changed capture tooling, artifact naming and focused
+Python tests. It added strict bounding-box-aware recognition of a wrapped action
+label, bounded failure evidence and names that distinguish run attempts.
+Unrelated words, a hidden action and a blank screen still cannot satisfy the
+gate. Its exact-source execution follows; the earlier core/build successes and
+one inspected idle PNG were not substituted for that run.
+
+## Final native run, visual acceptance and merge
+
+[Run 42443019975](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443019975),
+attempt **1**, job **128616065718**, **succeeded** for public source
+`222caea29b040063658cad2288b2e02726d02c73`.
+
+| Check | Actual result |
+| --- | --- |
+| Core suite | 68 tests, 0 failures |
+| Simulator-hosted suite | 34 tests, 0 failures: 11 DiagnosticsIntegration, 10 renderer, 2 session, 4 PassiveAcquisition and 7 PassivePresentation |
+| Capture-recognition tests | 10 Python tests passed; counted separately from Swift tests |
+| Core Release | Passed |
+| Simulator Debug / unsigned device Release | Both passed |
+| Native Swift Vision helper | Compilation passed |
+| Four required captures | Complete manifest; each passed on its first screenshot-recognition attempt; all four PNGs visually inspected by the coordinator |
+
+The inspected images and recorded timings were:
+
+| Capture | Observed content | Readiness elapsed (s) | Launch-command return (s) |
+| --- | --- | ---: | ---: |
+| Idle | Fully visible **Start listening**; LIVE Listen; MIC OFF; acquisition not started; hatched missing spectrum | 11.101 | 1.289 |
+| DEMO Field | Visible **SYNTHETIC FIELD** caption and Stop action; synthetic RMS approximately −23 dBFS, peak 0.1052 FS | 13.867 | 1.143 |
+| DEMO Waterfall | Actual synthetic sample spectrum with frequency/time axes and visible Stop action | 14.763 | 1.550 |
+| DEMO Diagnostics | Healthy running DEMO; app tone gate No; microphone callbacks 0; RMS approximately −23 dBFS, peak 0.1057 FS | 18.081 | 1.018 |
+
+Readiness includes CI, screenshot and OCR work. Launch-command return is a
+different event; neither column measures physical-device startup or acoustic
+processing latency. The successful sequence verifies this candidate's tested
+Simulator UI and fixtures. It does not establish the original cause of the
+earlier launch timeout or physical microphone operation.
+
+Artifact ID: `13602418489`; name:
+`rhea-rf-spanner-build-68044aaac4877d4d5d56c099068a2d94b06c65e8-attempt-1`;
+SHA-256:
+`a4cd2be370597dd6d7eea37b271bf427861bdbed12ff441c49bed71ab1d0a5ca`.
+The artifact name uses the PR merge SHA; tested source head is `222caea2` above.
+Reported expiry is **2026-11-15**. The actual download and hash were verified
+on WD at `C:\Users\wheel\RheaWork\ci-42443019975`.
+
+Separate CodeQL checks for Python and GitHub Actions succeeded. PR #4 merged
+into main at `dff7c9f7fa99e1df07d8844f7546427119eb1a9e`. The coordinator
+verified all **133 tracked blob hashes and modes** against tested source
+`222caea29b040063658cad2288b2e02726d02c73`. The G2 spatial-context draft is
+separate and is not part of this G1 release.
+
+## Distribution checkpoint
+
+The **0.2.2 (4)** TestFlight workflow was dispatched **once** as
+[run 42443912311](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443912311)
+and **succeeded**. Validation job **128618729126** and signing/upload job
+**128618751852** both succeeded. Local signature/profile checks and Apple
+validation passed; the upload was accepted.
+
+The release manifest identifies source
+`222caea29b040063658cad2288b2e02726d02c73`, workflow commit
+`dff7c9f7fa99e1df07d8844f7546427119eb1a9e`, version **0.2.2**, build **4**,
+**Xcode 26.3 (Build 17C529)** and **SDK 26.2**. Actual payload hashes were
+independently checked against the manifest:
+
+| Payload | SHA-256 |
+| --- | --- |
+| Signed IPA | `c709915d998af085143af44fbf8b5500eecce549e70ae875d97d0f3820984327` |
+| Archive ZIP | `51de36baed11c115797e2a284c414ddb84864202a71ecae2a38418b127060068` |
+
+Distribution artifact ID: `13602429233`; name:
+`rhea-testflight-222caea29b040063658cad2288b2e02726d02c73-build-4`;
+SHA-256:
+`d230f9626b1e0e87f8fce8aed2e0be513f40c3a36190747e03e142c6ded46662`.
+Reported expiry is **2026-11-11**. The artifact was downloaded and its hash
+verified on WD at `C:\Users\wheel\RheaWork\release-0.2.2-4`.
+
+A direct App Store Connect observation at `2026-11-08T03:48:16Z`
+(06:48:16 Europe/Moscow) found upload
+`4f5ba9b4-32e9-4189-9658-62cec90fb8ff`, version **0.2.2**, build **4**, in
+**PROCESSING**, with `errors: []` and `warnings: []`. It had not yet appeared in
+the builds list at that observation.
+
+The next direct protected read-only App Store Connect observation, at
+`2026-11-08T03:51:37Z` (06:51:37 Europe/Moscow), confirmed:
+
+| Apple record | Observed value |
+| --- | --- |
+| Build ID | `4f5ba9b4-32e9-4189-9658-62cec90fb8ff` |
+| Build number | `4` |
+| Pre-release version ID | `3fade264-4944-4c1d-acf1-c56b85e0a865` |
+| Pre-release version / platform | `0.2.2` / `IOS` |
+| Build processing state | `VALID` |
+| Upload ID / state | `4f5ba9b4-32e9-4189-9658-62cec90fb8ff` / `COMPLETE` |
+| Upload messages | `errors: []`, `warnings: []`, `infos: []` |
+
+This confirms upload and Apple processing for **0.2.2 (4)**. It does not
+establish tester availability, physical-device acceptance or App Store review
+approval. Do not duplicate the completed upload.
+
+Tester-group assignment remains blocked. Automatic approval review rejected
+the access grant because the upload authorization did not explicitly cover the
+recipient access scope. Do not retry assignment without explicit authorization
+for that access. No physical G1 installation or measurement has been observed.
 
 ## Software validation gates
 
 | Boundary | Required evidence | Current status |
 | --- | --- | --- |
-| Portable analysis | Known digital input, levels, FFT scale/peak, variable callback partitions, gaps/drops, invalid time and nonfinite input; no tone result in Listen | 68 core tests passed in both `d371a6df` attempts; next capture-only amendment awaits its own native run |
-| Capture adapter | Synthetic PCM through the production CaptureContext, ring and consumer; captured-duration cap independent of source callbacks | Hosted fixtures passed at `f8d1eed0`; not executed in either `d371a6df` attempt; physical capture unverified |
-| Model lifecycle | Explicit Listen start without output consent, real ring/DSP delivery, no phase/Replay, captured duration and retained stop evidence | Hosted fixtures passed at `f8d1eed0`; not executed in either `d371a6df` attempt; physical lifecycle unverified |
-| Renderer | Uploaded texture values, display-only parameters, missing intervals, rewound/current-missing frames and recovery | Regressions passed at `f8d1eed0`; later hosted execution pending |
-| Audio graph | Input-only policy and source guards; no source node, output-node access or speaker override on Listen branch | Source review and policy fixtures passed; actual engine startup/cleanup instrumentation and device graph behavior unexecuted |
-| Native build | Core Release, Simulator Debug and unsigned device Release | Passed in both `d371a6df` attempts; next amendment pending |
-| Visible content and hosted suite | Source/presentation/action readiness for required screenshots, visual inspection and hosted tests | `d371a6df` attempt 1 timed out before screenshots; attempt 2 showed a visible idle Start action but failed wrapped-label recognition. Hosted tests did not run; new capture gate and complete sequence pending |
-| Distribution | Reviewed main ancestor, signed archive/export, Apple validation/upload/processing, internal group association | Not dispatched for 0.2.2 (4) |
+| Portable analysis | Known digital input, levels, FFT scale/peak, variable callback partitions, gaps/drops, invalid time and nonfinite input; no tone result in Listen | 68 core tests passed at `222caea2` |
+| Capture adapter | Synthetic PCM through the production CaptureContext, ring and consumer; captured-duration cap independent of source callbacks | Hosted fixtures passed at `222caea2`; physical capture unobserved |
+| Model lifecycle | Explicit Listen start without output consent, real ring/DSP delivery, no phase/Replay, captured duration and retained stop evidence | Hosted fixtures passed at `222caea2`; physical lifecycle unobserved |
+| Renderer | Uploaded texture values, display-only parameters, missing intervals, rewound/current-missing frames and recovery | Hosted regressions passed at `222caea2`; four idle/DEMO captures inspected |
+| Audio graph | Input-only policy and source guards; no source node, output-node access or speaker override on Listen branch | Source review and policy fixtures passed; actual AVAudioEngine startup/cleanup instrumentation and physical graph behavior remain unexecuted |
+| Native build | Core Release, Simulator Debug and unsigned device Release | Passed at `222caea2` |
+| Visible content and hosted suite | Source/presentation/action readiness, visual inspection and hosted tests | All four capture gates passed and PNGs were inspected; 34 hosted tests passed; 10 separate Python recognition tests passed |
+| Distribution | Reviewed main ancestor, signed archive/export and Apple validation/upload/processing | G1 merged with 133 matching tracked blobs/modes; single run 42443912311 succeeded; signature/profile and Apple validation passed, actual IPA/archive hashes verified. Apple build VALID / upload COMPLETE at 2026-11-08T03:51:37Z, with empty errors/warnings/infos |
+| Tester access and device acceptance | Authorized group association, installation and a physical diagnostic trace | Access assignment blocked pending explicit authorization; physical G1 unobserved |
 
 Keep each source SHA, test count, run/artifact identity and inspected capture
 together. A prior pass does not validate a later amendment. A digital fixture
@@ -207,7 +320,8 @@ calibration.
 
 ## Smallest phone experiment
 
-Open **LIVE → Listen**, grant microphone permission if requested, then explicitly
+After authorized tester access and installation, open **LIVE → Listen**, grant
+microphone permission if requested, then explicitly
 start. Observe input callbacks, accepted samples, RMS/peak, spectrum frames and
 GPU completions. Compare quiet and ordinary audible sound without interpreting
 dBFS as dB SPL. Stop and inspect the retained report. If a route/format/startup

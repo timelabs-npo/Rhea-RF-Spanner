@@ -67,7 +67,7 @@ Depth remains a patch value in meters from the camera plane, with categorical
 confidence; it is not a source location or a calibrated error bound. See
 [Apple's ARDepthData description](https://developer.apple.com/documentation/arkit/ardepthdata).
 
-## Native gate — first compile finding corrected, rerun pending
+## Native gate — compile correction and Simulator-control failures
 
 [Native run 42441755655](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42441755655)
 checked exact public source `6a364a96acb06064a2a8fa43e87e4ce8eaa92477`.
@@ -80,10 +80,10 @@ and hosted tests did not execute in this run.
 The correction uses the empty option set `sceneReconstruction = []`. Review
 confirmed adjacent option-set assignments already use array literals;
 `environmentTexturing = .none` is an enum case and remains unchanged. Native
-validation of this correction is pending. The required gate compiles Simulator
+validation of this correction was required. The gate compiles Simulator
 Debug and unsigned device Release, executes the existing G1 regressions plus
 spatial fixtures, and verifies native capture readiness. No complete native
-pass is claimed at this checkpoint.
+pass was claimed at that checkpoint.
 
 [Run 42442191065](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42442191065)
 then checked correction `c4d0b56d606abc2999f0154a14ac01c22670eaa6`.
@@ -95,11 +95,57 @@ after another 10 seconds. No screenshot or hosted-test pass is claimed. Artifact
 `a0db392fbb5f9969c6d114aa345efacba26abc3fe0f21870a69b7588645b0289`,
 preserves the failure logs. This does not identify a spatial runtime fault.
 
-The next amendment adopts G1's bounded command-failure reporting and
+The next amendment adopted G1's bounded command-failure reporting and
 geometry-aware recognition for the native-observed wrapped Start title. It
-keeps the cold-idle order and the 45-second readiness deadline. Ten Python
-recognition regressions are separate from the Swift test counts. Full native
-capture and hosted spatial validation remain pending for that amendment.
+kept the cold-idle order and the 45-second readiness deadline. Ten Python
+recognition regressions are separate from the Swift test counts.
+
+[Run 42443083460](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443083460)
+checked amendment `14adceda709d47a7c9c9040689fa249db6d7b1e1`.
+Core Release, Simulator Debug and unsigned device Release compiled;
+**85 core tests and 10 separate Python recognition tests passed**. Before app
+launch, `simctl bootstatus 25C22EBC-57CC-4272-8C91-050D3D572B32 -b`
+timed out at the existing **480-second** limit. No screenshots or hosted tests
+executed. The capture script had not yet created its manifest at this setup
+stage, so the job log preserves the command and failure.
+
+Artifact `13602643246`, name
+`rhea-rf-spanner-build-f3648873c04270efde735ca4dfa302c213fabcf5-attempt-1`,
+SHA-256 `cded317e4222bf294bd4847096dea93d50930cf4f8eb3ae4c98592eee60d8f8d`,
+was downloaded and hash-verified on WD at
+`C:\Users\wheel\RheaWork\ci-42443083460`. This failure occurred before the app
+launched and does not identify its cause or validate spatial hosted behavior.
+
+### Isolated Simulator-control correction awaiting native validation
+
+The next G2-only correction creates the manifest before setup and records the
+installed `simctl` help and actual device catalog. It creates a uniquely named
+Simulator using catalog-provided model/runtime identifiers. Only a canonical,
+nonzero UUID returned by successful creation and absent from the prior catalog
+becomes owned. Boot, shutdown and deletion target only that owned UUID.
+
+The first cold idle launch skips termination of an app that has never run on
+the new device. Later scenarios retain bounded prelaunch termination. The
+**45-second visible-content deadline and 480-second boot limit remain
+unchanged**; there is no launch retry or app warmup. Cleanup surrounds both
+captures and hosted tests, attempts owned shutdown and deletion separately,
+and preserves the original failure. Manifest-write errors during cleanup must
+not suppress either cleanup command or replace an earlier error.
+
+**22 Python fixtures pass locally:** 10 existing recognition fixtures and
+12 lifecycle fixtures exercising the real coordinator with mocked commands.
+They are not Simulator, Swift, OCR or sensor execution. Independent review
+reproduced evidence-write failures that prevented cleanup, masked a launch
+exception, or interrupted ownership registration after successful creation.
+The correction makes failure reporting best effort and registers a verified
+created UUID before completion evidence I/O can throw. These paths have focused
+regressions, including rejection of UUID text from a failed create command.
+
+A native run of the final amended source is still required. The same change
+imports the reviewed G1 status documentation from main `c830a70c`, retaining
+the spatial-branch banner, and corrects the module/design provenance wording.
+No G1 release source, app/module behavior, version, signing or workflow is
+changed.
 
 ## Integration and physical gate — not executed
 

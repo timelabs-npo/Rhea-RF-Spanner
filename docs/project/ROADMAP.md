@@ -33,9 +33,11 @@ frequency band, measured quantity, and limitations that apply to it.
 | Existing software | Isolated Swift signal core, active acoustic LIVE, silent deterministic DEMO, Waterfall, and bounded in-memory REPLAY; see [architecture](../ARCHITECTURE.md) |
 
 The diagnostic build **0.2.1 (3)** has since passed native validation, uploaded
-and processed as VALID; tester-group access has not been granted. G1 targets
-**0.2.2 (4)** and its latest amendments require their own validation. Current
-source/run/access details are in [the checkpoint](NEXT_SESSION.md) and the
+and processed as VALID; tester-group access has not been granted. G1
+**0.2.2 (4)** has since passed exact-source native validation, merged, uploaded
+and processed as VALID. Tester access and physical acceptance remain open.
+Current source/run/access details are in [the checkpoint](NEXT_SESSION.md), the
+[G1 evidence record](../PASSIVE_AUDIO_VALIDATION.md) and the
 [G0 evidence record](../DIAGNOSTIC_RELEASE_VALIDATION.md). Successful compilation,
 Apple processing, tester access and useful hardware operation are separate
 observations.
