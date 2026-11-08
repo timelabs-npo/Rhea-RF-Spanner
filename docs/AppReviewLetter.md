@@ -1,6 +1,6 @@
 # App Review letter
 
-**Status:** Prepared for the **0.2.2 (4) Listen candidate**. This letter has not been sent to Apple; submission and delivery are pending. It describes the implemented source and does not assert successful native validation, physical-device testing, TestFlight review, or App Store review for this candidate. Match the letter to the exact submitted build and source commit. Build and distribution evidence is recorded separately.
+**Status:** Prepared for **0.2.2 (4), Listen**. This letter has not been sent to App Review. The canonical [validation and distribution record](PASSIVE_AUDIO_VALIDATION.md) identifies the tested source, native results, signed upload and Apple's VALID / COMPLETE observation at `2026-11-08T03:51:37Z`. Match the letter to the exact submitted build and source commit; it does not assert physical-device acceptance, tester availability, TestFlight review or App Store review approval.
 
 ## Letter
 

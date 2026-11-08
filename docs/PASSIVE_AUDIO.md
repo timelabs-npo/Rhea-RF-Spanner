@@ -1,13 +1,18 @@
 # G1 useful passive audio
 
-**Status:** P1/P2/P3 source candidate for native review. This is a description of
-the source change and the checks required for it, not a hardware success record.
-The WD host has no native Swift/Xcode toolchain. G1 compilation, Mac CI,
-Simulator execution, installation, and physical-device behavior are unverified
-here. P4 remains pending the phone owner. G1 targets **0.2.2 (4)**; native
-validation and delivery of that exact build remain pending. G0 diagnostic
-delivery evidence is recorded separately. Implementation/review provenance and
-exact-candidate results belong in [the validation record](PASSIVE_AUDIO_VALIDATION.md).
+**Status: 0.2.2 (4), software-verified G1 source; physical P4 pending.** Public
+source `222caea29b040063658cad2288b2e02726d02c73` passed native builds,
+68 core tests, 34 Simulator-hosted tests and 10 separate Python recognition
+tests in [run 42443019975](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443019975).
+All four idle/DEMO captures passed readiness and were visually inspected.
+PR #4 merged into main with identical tracked blobs and modes. The single
+TestFlight run succeeded: signed export, Apple validation and upload passed.
+App Store Connect confirmed build **0.2.2 (4)** as VALID and the upload COMPLETE
+at `2026-11-08T03:51:37Z`. Tester access remains blocked, and physical Listen/Tone
+behavior is unobserved.
+These are Mac CI results, not WD compilation or a hardware success record.
+Exact source, run, artifacts, historical failures and delivery stages are in
+[the validation record](PASSIVE_AUDIO_VALIDATION.md).
 
 ## Acquisition choices
 
@@ -135,17 +140,19 @@ remains explicit, local-only, excluded from Handoff, and expires after one hour;
 copies pasted elsewhere have the destination's lifetime. No automatic upload,
 background audio mode, persistent raw recording, or passive export is added.
 
-## Required verification
+## Verification and remaining device gate
 
 The focused source fixtures cover the new branch: passive audible-band spectra
 and levels without a tone result; variable block sizes, gaps, missing timestamps,
 nonfinite input and recovery; no-transmit graph policy; capture progress
 without rendered output; and model/display selection, frozen history, and
-passive frame identity without a slice. Passive exclusion from the v1 tape is
-established here by the guarded model path; a full Listen model/device run has
-not been executed. Existing active phase, DEMO, v1 codec, Replay, and G0 diagnostics
-tests remain necessary regressions. Added tests are source artifacts until run
-on the appropriate Swift/Mac host.
+passive frame identity without a slice. The final native run executed the core
+and hosted suites. In particular,
+`testListenModelProcessesFixturePCMWithoutToneConsentOrReplayAndRetainsStoppedData`
+exercised the production model with supplied PCM through the ring/DSP path and
+asserted no passive Replay records. This hosted fixture uses a controlled audio
+adapter; it is separate from a physical Listen run. Existing active phase,
+DEMO, v1 codec, Replay and G0 diagnostics remain regression coverage.
 
 For P1, `testListenGraphRequiresOnlyBuiltInInputAndNeverSelectsTransmission`
 checks `AudioGraphPlan` policy: category, mode, options, transmission intent, and
@@ -157,7 +164,11 @@ audio-graph behavior remain unexecuted. The synthetic `CaptureContext` tests
 exercise the input adapter, counters, ring, and consumer; they do not establish
 that an iPhone audio session supplied those buffers.
 
-Local WD checks performed for this change:
+### Historical WD implementation checks
+
+The following checks describe the original bounded implementation before later
+integration, versioning and capture-tooling changes. They are retained as
+provenance, not the current file/test inventory or native validation result:
 
 - `python scripts/generate_project.py` succeeded; a second generation was
   byte-identical. The shared scheme parsed as XML, and all 10 app sources and
@@ -165,8 +176,9 @@ Local WD checks performed for this change:
   directory targets discover the new core source and test automatically.
 - `git diff --check` passed. An inline Python comparison against base
   `ca4442415728cbf4f3e1721b8b1e5015a0cebc57` confirmed that the active tone-analysis
-  body is unchanged. The v1 codec, FFT, existing G0 tests/helpers, version/config,
-  workflows, resources, and historical evidence have no changes.
+  body was unchanged in that delta. The v1 codec, FFT, existing G0 tests/helpers,
+  version/config, workflows, resources and historical evidence were unchanged
+  in that implementation snapshot.
 - An independent Python Float32 fixture calculation gave RMS
   `0.176776694937`, RMS level `-15.05149980 dBFS`, and bin-40 spectral amplitude
   `-12.04119984 dBFS` at `937.5 Hz`. This verifies fixture expectations only.
@@ -179,8 +191,10 @@ A useful digital fixture is a 0.25-peak, bin-40 sine: 937.5 Hz, approximately
 changes must not change these underlying values. This is a synthetic arithmetic
 expectation, not a predicted physical microphone level.
 
-On the coordinator's Mac, run these existing commands from the project root
-(they were not run on WD):
+For a future source change, the Mac validation entry points include the commands
+below. The evidence record identifies what actually ran for the current source;
+these instructions do not call for another native run for a documentation-only
+status update. They were not executed on WD:
 
 ```bash
 bash scripts/build.sh all
@@ -196,7 +210,10 @@ Waterfall, absent phase controls, honest source/unit labels, and stopped history
 Any Simulator passive fixture must be labelled synthetic and silent. Do not
 report it as hardware input. Preserve actual command output and failures.
 
-P4 then uses the reviewed build on the phone owner's physical iPhone. Record
+### P4: physical-device acceptance remains open
+
+After authorized tester access, P4 uses the reviewed build on the phone owner's
+physical iPhone. Record
 source commit, installed version/build, model/iOS, actual route/rate, test
 conditions, observations, and untested cases. The smallest useful sequence is:
 

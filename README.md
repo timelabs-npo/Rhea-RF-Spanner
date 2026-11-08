@@ -24,12 +24,18 @@ False color does not imply thermal sensing.
 
 ## Build and validation status
 
-**Current source candidate: 0.2.2 (4), useful passive audio.** LIVE opens in
+**Current G1 source: 0.2.2 (4), useful passive audio.** LIVE opens in
 Listen, with measured levels and spectrum independently of the active tone
-experiment. Source `f8d1eed0` passed native builds and 68 core / 33 hosted tests.
-A subsequent timing-flags correction and capture-readiness investigation are
-pending; that earlier pass does not validate the amended source. TestFlight
-delivery of this candidate has not been dispatched.
+experiment. Source `222caea2` passed **68 core tests, 34 Simulator-hosted tests
+and 10 separate Python recognition tests**, native builds and all four capture
+gates. The coordinator inspected all four PNGs, including a visible idle
+**Start listening** action. PR #4 merged into main at `dff7c9f7`; all 133 tracked
+blob hashes and modes match the tested source. TestFlight
+[run 42443912311](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443912311)
+was dispatched once and **succeeded**: signing, Apple validation and upload
+passed. App Store Connect confirmed build **0.2.2 (4)** as **VALID**, with the
+upload **COMPLETE**, at `2026-11-08T03:51:37Z`. Tester access remains blocked
+pending explicit authorization; physical-device operation remains unobserved.
 See [the passive-audio behavior](docs/PASSIVE_AUDIO.md) and
 [its evidence record](docs/PASSIVE_AUDIO_VALIDATION.md).
 
@@ -43,7 +49,7 @@ Copy Diagnostic Dump action, an analytical self-test, and full-band Waterfall.
 | --- | --- |
 | 0.2.0 (2), previous release | Apple processing VALID, internal testing enabled, owner-confirmed installation and initial test; useful physical operation remains unverified |
 | 0.2.1 (3), diagnostic foundation | Final source `d4903b84` passed 63 core + 21 hosted tests and native builds in [run 42438050312](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438050312); PR #3 merged at `3f7716`. [Upload run 42438984196](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438984196) succeeded; Apple processing is VALID. Tester-group access was not granted and needs explicit approval |
-| 0.2.2 (4), this passive-audio candidate | PR #4 source `f8d1eed0` passed 68 core + 33 hosted tests in [run 42438775739](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438775739). Four PNGs were generated, but the inspected idle capture was blank except for the status bar; capture readiness versus startup failure remains under investigation. Amended-source CI and delivery are pending |
+| 0.2.2 (4), passive audio | PR #4 source `222caea2` passed 68 core + 34 hosted tests, 10 separate Python tests, native builds and four inspected captures in [run 42443019975](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443019975). Merged to main; signed export, Apple validation and upload passed. Apple processing is VALID and upload COMPLETE; tester access is blocked and physical Listen/Tone behavior remains unobserved |
 
 The [G0 evidence record](docs/DIAGNOSTIC_RELEASE_VALIDATION.md) preserves exact
 sources, test counts, review findings and artifact identities. WD sessions have
@@ -56,6 +62,7 @@ The staged [project roadmap](docs/project/ROADMAP.md),
 [tracking issue](https://github.com/timelabs-npo/Rhea-RF-Spanner/issues/2) distinguish
 implemented audio features from planned AR/LiDAR, external probes and shared
 sessions. A verified software candidate and field confirmation are separate gates.
+The separate G2 spatial-context draft is not included in this G1 release.
 
 Earlier release evidence remains in the
 [Observatory report](docs/OBSERVATORY_VALIDATION.md),
@@ -238,6 +245,14 @@ The newer **0.2.1 (3)** diagnostic build has also uploaded and processed as
 VALID; it has not been assigned to the internal tester group. Automatic approval
 review rejected that access grant because the upload authorization did not
 explicitly cover the recipient scope. See the [G0 evidence record](docs/DIAGNOSTIC_RELEASE_VALIDATION.md).
+For **0.2.2 (4)**, the single TestFlight run succeeded. The signed IPA and archive
+hashes match the release manifest; Apple validation passed and the upload was
+accepted. App Store Connect confirmed build processing VALID and upload COMPLETE
+at `2026-11-08T03:51:37Z`, with empty errors, warnings and informational messages.
+Tester-group access remains blocked pending explicit authorization, and
+installation is unobserved.
+Current G1 results and prior failed capture attempts are retained in
+[the passive-audio evidence record](docs/PASSIVE_AUDIO_VALIDATION.md).
 
 See [AppleSubmission.md](docs/AppleSubmission.md),
 [AppReviewLetter.md](docs/AppReviewLetter.md), and
