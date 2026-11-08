@@ -24,11 +24,11 @@ READINESS_POLL_SECONDS = 0.5
 # A source tab/button alone is not evidence of the displayed acquisition mode.
 # Require the source caption and a view-specific caption for each DEMO image.
 SCENARIOS = [
-    ("01-idle", [], ["RHEA", "LIVE LISTEN", "Listen", "Tone experiment", "MIC OFF"]),
+    ("01-idle", [], ["RHEA", "LIVE LISTEN", "Listen", "Tone experiment", "MIC OFF", "START LISTENING"]),
     ("02-demo-field", ["--observatory-demo"],
-     ["RHEA", "DEMO SYNTHETIC", "SYNTHETIC FIELD", "Synthetic samples received"]),
+     ["RHEA", "DEMO SYNTHETIC", "SYNTHETIC FIELD", "Synthetic samples received", "STOP"]),
     ("03-demo-waterfall", ["--observatory-demo", "--observatory-waterfall"],
-     ["RHEA", "DEMO SYNTHETIC", "SAMPLE SPECTRUM", "Synthetic samples received"]),
+     ["RHEA", "DEMO SYNTHETIC", "SAMPLE SPECTRUM", "Synthetic samples received", "STOP"]),
     ("04-demo-diagnostics", ["--observatory-demo", "--observatory-waterfall", "--observatory-diagnostics"],
      ["Pipeline diagnostics", "Mode state", "demo running", "Synthetic samples received"]),
 ]
@@ -48,15 +48,23 @@ def write_manifest(manifest: dict) -> None:
 
 
 def normalize_text(value: str) -> str:
-    # Vision can split labels or vary case, spaces, and punctuation. This does
-    # not correct/substitute letters or invent a missing source/view caption.
+    # Vision can vary case, spaces, and punctuation within a recognized label.
+    # This does not correct/substitute letters or invent a missing caption.
     return "".join(character for character in unicodedata.normalize("NFKC", value).casefold()
                    if character.isalnum())
 
 
 def missing_labels(lines: list[dict], required: list[str]) -> list[str]:
-    observed = normalize_text(" ".join(line["text"] for line in lines))
-    return [label for label in required if normalize_text(label) not in observed]
+    normalized_lines = {normalize_text(line["text"]) for line in lines}
+    # Primary action titles must be their own visible label: instructional text
+    # containing "Tap Start listening" or "stopped" is not evidence of a button.
+    primary_actions = {"startlistening", "stop"}
+    # Never join unrelated lines: the source caption "DEMO SYNTHETIC" followed
+    # by a FIELD selector is not the view-specific caption "SYNTHETIC FIELD".
+    return [label for label in required
+            if (normalize_text(label) not in normalized_lines
+                if normalize_text(label) in primary_actions
+                else not any(normalize_text(label) in line for line in normalized_lines))]
 
 
 def remaining_timeout(deadline: float) -> float:

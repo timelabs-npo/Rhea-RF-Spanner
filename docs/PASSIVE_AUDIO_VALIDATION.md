@@ -99,6 +99,42 @@ UI; it does not establish a cause for the earlier blank capture or a device
 startup-performance result. Native helper compilation and the new captures are
 pending at this amendment.
 
+## Visible-content run and layout finding
+
+[Run 42440335553](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42440335553)
+tested amendment `3633e980c0c42e9a00259593c96a7341514d664f`. It passed
+68 core tests, Core Release, Simulator Debug, unsigned device Release and
+native Vision-helper compilation. The overall run **failed at the capture
+gate**; hosted tests did not execute after that failure.
+
+The first idle attempt was not ready. The next actual idle PNG, captured
+11.034 seconds after launch began, contained the app; recognition completed at
+14.146 seconds. These timings include CI/screenshot/OCR work and are not a
+physical-device launch benchmark. Visual inspection found the Listen screen's
+controls and consent content pushing the primary Start action below the screen.
+The layout therefore requires correction, despite its successful label check.
+
+The DEMO Field capture showed synthetic processing and a visible Stop action,
+but the gate required `SYNTHETIC FIELD`, a caption deliberately hidden while
+the controls were open. It failed after 45 seconds. The next amendment must
+correct the layout and check actual visible source/presentation evidence,
+including the idle primary action. It must not accept either a blank screen
+or a hidden primary action merely because launch succeeded.
+
+Failure artifact: `13600519872`, SHA-256
+`f42f59d88abfd69ece833aee859aff24d8d62a87dae0e1d3766e34f59f6b7386`.
+The first/final PNGs, recognized labels and timings remain in its manifest.
+
+The following layout amendment moves Start/Stop into a bottom safe-area dock
+outside the scrollable content, keeps the Listen action centered, and allows
+long controls, consent and status text to scroll. Field uses an immersive layout
+only when its content fits. The scientific presentation caption follows the
+input readout and remains visible while controls are open. The capture gate now
+requires a standalone `START LISTENING` label for idle and `STOP` for DEMO.
+Per-line recognition prevents unrelated source and selector text from combining
+into a false caption match. Native compilation and visual acceptance of this
+layout amendment are still required; it is not validated by either earlier run.
+
 ## Software validation gates
 
 | Boundary | Required evidence | Current status |

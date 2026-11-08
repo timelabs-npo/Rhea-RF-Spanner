@@ -25,37 +25,26 @@ struct ExperimentView: View {
         GeometryReader { geometry in
             let needsScroll = dynamicTypeSize >= .xxLarge || geometry.size.height < 600 || geometry.size.width < 340
             Group {
-                if needsScroll {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            topChrome
-                            viewport(overlayControls: false)
-                                .frame(height: dynamicTypeSize.isAccessibilitySize ? 600 : dynamicTypeSize >= .xxLarge ? 430 : 340)
-                            if showControls { controlPanel }
-                            consentPanel
-                            transport
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: 720)
-                        .frame(maxWidth: .infinity)
+                if !needsScroll && model.presentation == .field {
+                    // Prefer the immersive field only when its actual content
+                    // fits. Longer controls/consent fall back to scrolling.
+                    ViewThatFits(in: .vertical) {
+                        immersiveFieldContent
+                        scrollingContent
                     }
                 } else {
-                    VStack(spacing: 10) {
-                        topChrome.padding(.horizontal, 14)
-                        viewport(overlayControls: model.presentation == .field)
-                            .frame(maxHeight: .infinity)
-                            .padding(.horizontal, 8)
-                        if showControls && model.presentation == .waterfall {
-                            controlPanel.padding(.horizontal, 12)
-                        }
-                        consentPanel.padding(.horizontal, 16)
-                        transport.padding(.horizontal, 20)
-                    }
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
+                    scrollingContent
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            transport
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
+                .background(Color.black)
         }
         .background(Color.black.ignoresSafeArea())
         .tint(accent)
@@ -66,6 +55,39 @@ struct ExperimentView: View {
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView(model: model, renderer: rendererDiagnostics)
         }
+    }
+
+    private var scrollingContent: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                topChrome
+                // Consent stays near the acquisition selector. Reviewing it
+                // cannot push the primary action below the screen.
+                consentPanel
+                viewport(overlayControls: false)
+                    .frame(minHeight: dynamicTypeSize.isAccessibilitySize ? 600 : dynamicTypeSize >= .xxLarge ? 430 : 340)
+                if showControls { controlPanel }
+                sessionMessage
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("observatoryScrollContent")
+    }
+
+    private var immersiveFieldContent: some View {
+        VStack(spacing: 10) {
+            topChrome.padding(.horizontal, 14)
+            viewport(overlayControls: true)
+                .frame(minHeight: 420, maxHeight: .infinity)
+                .padding(.horizontal, 8)
+            consentPanel.padding(.horizontal, 16)
+            sessionMessage.padding(.horizontal, 20)
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 4)
     }
 
     private var topChrome: some View {
@@ -200,7 +222,6 @@ struct ExperimentView: View {
                     VStack(spacing: 12) {
                         viewportHeader
                         Spacer(minLength: 8)
-                        if !(overlayControls && showControls) { fieldCaption }
                         if overlayControls && showControls { controlPanel }
                     }
                     .padding(12)
@@ -249,6 +270,9 @@ struct ExperimentView: View {
                     .padding(.vertical, 7)
                     .modifier(InstrumentSurface(cornerRadius: 12))
             }
+            // Source and presentation remain explicit even with controls open.
+            fieldCaption
+                .frame(maxWidth: .infinity)
         }
     }
 
@@ -425,6 +449,7 @@ struct ExperimentView: View {
         .padding(.top, 8)
         .padding(.bottom, 10)
         .modifier(InstrumentSurface(cornerRadius: 24))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var carrierPanel: some View {
@@ -642,65 +667,78 @@ struct ExperimentView: View {
     }
 
     private var transport: some View {
-        VStack(spacing: 8) {
-            HStack(alignment: .center, spacing: 16) {
-                Button { setControlsVisible(!showControls) } label: {
+        HStack(alignment: .center, spacing: 16) {
+            Button { setControlsVisible(!showControls) } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.title3)
+                        .frame(width: 48, height: 48)
+                        .background(showControls ? accent.opacity(0.2) : Color(white: 0.12), in: Circle())
+                    Text("Adjust").font(.caption2)
+                }
+                .foregroundStyle(showControls ? accent : .white)
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(showControls ? "Hide instrument controls" : "Show instrument controls")
+            VStack(spacing: 5) {
+                Button(action: transportAction) {
+                    ZStack {
+                        Circle().stroke(.white.opacity(0.7), lineWidth: 2).frame(width: 74, height: 74)
+                        Circle().fill(model.mode == .replay ? accent : Color(red: 0.94, green: 0.18, blue: 0.12))
+                            .frame(width: 64, height: 64)
+                        if model.mode == .replay {
+                            Image(systemName: model.isReplaying ? "pause.fill" : "play.fill")
+                                .font(.title2.weight(.semibold))
+                                .foregroundStyle(.black)
+                        } else if model.isRunning || model.state == .preparing {
+                            RoundedRectangle(cornerRadius: 4).fill(.white).frame(width: 25, height: 25)
+                        } else if model.state == .requestingPermission {
+                            ProgressView().tint(.white)
+                        }
+                    }
+                    .opacity(transportEnabled ? 1 : 0.4)
+                }
+                .buttonStyle(.plain)
+                .disabled(!transportEnabled)
+                .accessibilityLabel(transportTitle)
+                .accessibilityIdentifier(model.isRunning ? "stopExperimentButton" : "startExperimentButton")
+                Text(transportTitle.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .tracking(0.8)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("primaryTransportTitle")
+            }
+            .frame(maxWidth: .infinity)
+            if model.phaseControlsAvailable {
+                Button { model.resetPhaseReference() } label: {
                     VStack(spacing: 5) {
-                        Image(systemName: "slider.horizontal.3")
+                        Image(systemName: "scope")
                             .font(.title3)
                             .frame(width: 48, height: 48)
-                            .background(showControls ? accent.opacity(0.2) : Color(white: 0.12), in: Circle())
-                        Text("Adjust").font(.caption2)
+                            .background(Color(white: 0.12), in: Circle())
+                        Text("Reference").font(.caption2)
                     }
-                    .foregroundStyle(showControls ? accent : .white)
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(showControls ? "Hide instrument controls" : "Show instrument controls")
-                VStack(spacing: 5) {
-                    Button(action: transportAction) {
-                        ZStack {
-                            Circle().stroke(.white.opacity(0.7), lineWidth: 2).frame(width: 74, height: 74)
-                            Circle().fill(model.mode == .replay ? accent : Color(red: 0.94, green: 0.18, blue: 0.12))
-                                .frame(width: 64, height: 64)
-                            if model.mode == .replay {
-                                Image(systemName: model.isReplaying ? "pause.fill" : "play.fill")
-                                    .font(.title2.weight(.semibold))
-                                    .foregroundStyle(.black)
-                            } else if model.isRunning || model.state == .preparing {
-                                RoundedRectangle(cornerRadius: 4).fill(.white).frame(width: 25, height: 25)
-                            } else if model.state == .requestingPermission {
-                                ProgressView().tint(.white)
-                            }
-                        }
-                        .opacity(transportEnabled ? 1 : 0.4)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!transportEnabled)
-                    .accessibilityLabel(transportTitle)
-                    .accessibilityIdentifier(model.isRunning ? "stopExperimentButton" : "startExperimentButton")
-                    Text(transportTitle.uppercased())
-                        .font(.caption2.weight(.semibold))
-                        .tracking(0.8)
-                }
-                .frame(maxWidth: .infinity)
-                if model.phaseControlsAvailable {
-                    Button { model.resetPhaseReference() } label: {
-                        VStack(spacing: 5) {
-                            Image(systemName: "scope")
-                                .font(.title3)
-                                .frame(width: 48, height: 48)
-                                .background(Color(white: 0.12), in: Circle())
-                            Text("Reference").font(.caption2)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!model.isRunning)
-                    .accessibilityLabel("Set a new phase reference")
-                    .accessibilityIdentifier("resetPhaseReferenceButton")
-                }
+                .disabled(!model.isRunning)
+                .accessibilityLabel("Set a new phase reference")
+                .accessibilityIdentifier("resetPhaseReferenceButton")
+            } else {
+                // Keep Start/Stop centered when Listen has no reference action.
+                Color.clear.frame(height: 1)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
             }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityIdentifier("transportDock")
+    }
+
+    private var sessionMessage: some View {
+        VStack(spacing: 8) {
             Text(model.message)
                 .font(.caption2)
                 .foregroundStyle(subdued)
