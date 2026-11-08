@@ -33,19 +33,36 @@ public enum ObservatoryPalette: String, Sendable, CaseIterable {
     }
 }
 
+/// Frequency extent of the displayed FFT. This never changes captured samples
+/// or the phase estimator's carrier. Levels remain digital dBFS, not RF or SPL.
+public enum SpectrumDisplayBand: String, Sendable, CaseIterable {
+    case fullBand, carrier
+
+    public var lowerHz: Float { self == .carrier ? 18_000 : 0 }
+    public var upperHz: Float { self == .carrier ? 22_000 : 24_000 }
+    public var displayName: String {
+        self == .carrier ? "Carrier · 18–22 kHz" : "Full audio · 0–24 kHz"
+    }
+    public var axisTicksKHz: [Int] {
+        self == .carrier ? [18, 19, 20, 21, 22] : [0, 6, 12, 18, 24]
+    }
+}
+
 /// Renderer-only settings. Acquisition and the simulator never read this type.
 public struct DisplayParameters: Sendable, Equatable {
     public var gainDB: Float
     public var persistence: Float
     public var palette: ObservatoryPalette
+    public var spectrumBand: SpectrumDisplayBand
 
     public init(
         gainDB: Float = 0, persistence: Float = 0.65,
-        palette: ObservatoryPalette = .aurora
+        palette: ObservatoryPalette = .aurora, spectrumBand: SpectrumDisplayBand = .fullBand
     ) {
         self.gainDB = gainDB
         self.persistence = persistence
         self.palette = palette
+        self.spectrumBand = spectrumBand
     }
 }
 

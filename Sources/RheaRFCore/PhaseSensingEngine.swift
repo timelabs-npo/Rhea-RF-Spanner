@@ -12,6 +12,10 @@ public final class PhaseSensingEngine: @unchecked Sendable {
     /// Nonfinite input or an unusable in-frame capture timeline clears the
     /// spectrum rather than retaining a stale or incorrectly timed frame.
     public private(set) var latestSpectrum: SpectrumFrame?
+    /// Aggregate input evidence from the most recently consumed analysis window.
+    /// Like the DSP workspace, this belongs to the one serial consumer; callers
+    /// pass a value snapshot to diagnostics instead of sharing raw sample memory.
+    public private(set) var latestInputStatistics: SignalBlockStatistics?
     private let ringBuffer: SPSCFloatRingBuffer
     private let input: UnsafeMutablePointer<Float>
     private let spectrumAnalyzer: SpectrumAnalyzer
@@ -85,6 +89,9 @@ public final class PhaseSensingEngine: @unchecked Sendable {
         guard let read = ringBuffer.read(into: input, count: configuration.frameSize) else {
             return nil
         }
+        latestInputStatistics = SignalBlockStatistics.measure(
+            UnsafeBufferPointer(start: input, count: configuration.frameSize)
+        )
         if read.samplesAreContiguous && read.timestampsAreValid {
             latestSpectrum = spectrumAnalyzer.analyze(
                 samples: UnsafeBufferPointer(start: input, count: configuration.frameSize),

@@ -19,8 +19,6 @@ private enum MetalSetupError: Error {
 final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     private static let spectrumWidth = 512
     private static let maximumHistory = 256
-    private static let lowerFrequency: Float = 18_000
-    private static let upperFrequency: Float = 22_000
 
     /// Six float4 values: 96 bytes, each aligned to 16 bytes in Swift and MSL.
     /// Do not replace these fields with SIMD3 or Swift Bool values.
@@ -43,6 +41,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         // an axis coordinate, not a unique identity for a spectral record.
         let frames: [SpectrumFrame]
         let end: UInt64?
+        let band: SpectrumDisplayBand
     }
 
     private struct CachedSpectrumRow {
@@ -53,6 +52,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
+    private let diagnostics: RendererDiagnostics
     private let inFlightFrames = DispatchSemaphore(value: 3)
     private weak var canvas: MTKView?
     private var redrawPending = false
@@ -65,15 +65,29 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     private var historyIdentity: HistoryIdentity?
     private var spectrumRows: [UInt64: CachedSpectrumRow] = [:]
     private var spectrumAvailable = false
+    private var spectrumBand: SpectrumDisplayBand = .fullBand
 
-    init(view: MTKView) throws {
-        guard let device = MTLCreateSystemDefaultDevice(),
-              let commandQueue = device.makeCommandQueue()
-        else { throw MetalSetupError.unavailable }
-        guard let library = device.makeDefaultLibrary(),
-              let vertexFunction = library.makeFunction(name: "phaseVertexMain"),
-              let fragmentFunction = library.makeFunction(name: "phaseFragmentMain")
-        else { throw MetalSetupError.shaderUnavailable }
+    init(view: MTKView, diagnostics: RendererDiagnostics? = nil) throws {
+        let diagnostics = diagnostics ?? RendererDiagnostics()
+        self.diagnostics = diagnostics
+        diagnostics.recordSetupStarted()
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            diagnostics.recordSetupFailure(.deviceUnavailable)
+            throw MetalSetupError.unavailable
+        }
+        guard let commandQueue = device.makeCommandQueue() else {
+            diagnostics.recordSetupFailure(.commandQueueUnavailable)
+            throw MetalSetupError.unavailable
+        }
+        guard let library = device.makeDefaultLibrary() else {
+            diagnostics.recordSetupFailure(.shaderLibraryUnavailable)
+            throw MetalSetupError.shaderUnavailable
+        }
+        guard let vertexFunction = library.makeFunction(name: "phaseVertexMain"),
+              let fragmentFunction = library.makeFunction(name: "phaseFragmentMain") else {
+            diagnostics.recordSetupFailure(.shaderFunctionUnavailable)
+            throw MetalSetupError.shaderUnavailable
+        }
 
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = vertexFunction
@@ -81,20 +95,37 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         self.device = device
         self.commandQueue = commandQueue
-        pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
+        do {
+            pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
+        } catch {
+            diagnostics.recordSetupFailure(.pipelineUnavailable, error: error)
+            throw error
+        }
 
         let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: .rg32Float, width: Self.spectrumWidth, height: 1, mipmapped: false
         )
         textureDescriptor.storageMode = .shared
         textureDescriptor.usage = .shaderRead
-        guard let texture = device.makeTexture(descriptor: textureDescriptor)
-        else { throw MetalSetupError.textureUnavailable }
+        guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
+            diagnostics.recordSetupFailure(.initialTextureUnavailable)
+            throw MetalSetupError.textureUnavailable
+        }
+        // Initialize this first texture directly. A second allocation used to
+        // be attempted here without checking whether the upload succeeded.
+        let initialWidth = Self.spectrumWidth
+        let emptyRow = Array(repeating: SIMD2<Float>(-160, 0), count: initialWidth)
+        emptyRow.withUnsafeBufferPointer { buffer in
+            guard let address = buffer.baseAddress else { return }
+            texture.replace(
+                region: MTLRegionMake2D(0, 0, initialWidth, 1), mipmapLevel: 0,
+                withBytes: address, bytesPerRow: initialWidth * MemoryLayout<SIMD2<Float>>.stride
+            )
+        }
         spectrumTexture = texture
         super.init()
         canvas = view
         assert(MemoryLayout<Uniforms>.stride == 96)
-        upload(Array(repeating: SIMD2<Float>(-160, 0), count: Self.spectrumWidth), height: 1)
 
         view.device = device
         view.colorPixelFormat = .bgra8Unorm
@@ -105,6 +136,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         view.enableSetNeedsDisplay = true
         view.delegate = self
         view.isAccessibilityElement = true
+        diagnostics.recordSetupSucceeded()
     }
 
     func update(
@@ -123,9 +155,15 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
             lastTimestamp.map { timestamp < $0 } ?? false
         } ?? false
         let newSample = newTimestamp != lastTimestamp || contextChanged
-        if contextChanged || rewound {
+        let bandChanged = display.spectrumBand != spectrumBand
+        spectrumBand = display.spectrumBand
+        if contextChanged || rewound || bandChanged {
             spectrumRows.removeAll(keepingCapacity: true)
             historyIdentity = nil
+            spectrumAvailable = false
+            uniforms.mode.z = 0
+        }
+        if contextChanged || rewound {
             fieldSamples.removeAll(keepingCapacity: true)
         }
         if newSample, slice?.didRebaseline == true || slice?.discontinuityDetected == true {
@@ -172,6 +210,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         if presentation == .waterfall {
             prepareWaterfall(history: history, spectrum: spectrum, endTimestamp: newTimestamp)
         }
+        diagnostics.recordSpectrumAvailability(spectrumAvailable)
         updateAccessibility(view: view, slice: slice, presentation: presentation,
                             phaseValid: phaseValid, active: active, reduceMotion: reduceMotion)
         view.setNeedsDisplay()
@@ -193,7 +232,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         var frames = byTimestamp.values.sorted { $0.sampleTimestamp < $1.sampleTimestamp }
         if let end { frames.removeAll { $0.sampleTimestamp > end } }
         frames = Array(frames.suffix(Self.maximumHistory))
-        let identity = HistoryIdentity(frames: frames, end: end)
+        let identity = HistoryIdentity(frames: frames, end: end, band: spectrumBand)
         guard identity != historyIdentity else { return }
 
         let retainedTimestamps = Set(frames.map(\.sampleTimestamp))
@@ -289,7 +328,11 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         return (width, height, pixels)
     }
 
-    /// Nearest measured FFT bins, not an illustrated or synthesized spectrum.
+    /// The strongest measured FFT bin in a display column's frequency cell.
+    /// When the grid is wider than a cell, use its nearest measured bin.
+    /// Peak-preserving downsampling avoids dropping narrow tones when the full
+    /// 1,025-bin audio spectrum is displayed in 512 columns; it is not a PSD or
+    /// interpolation. No displayed level is invented from a frequency model.
     /// Channel R holds original dBFS; G explicitly marks available data.
     private func resample(_ frame: SpectrumFrame) -> [SIMD2<Float>] {
         var row = Array(repeating: SIMD2<Float>(-160, 0), count: Self.spectrumWidth)
@@ -303,13 +346,46 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
             guard frequencies[index].isFinite, frequencies[index] > frequencies[index - 1]
             else { return row }
         }
+        let lowerFrequency = spectrumBand.lowerHz
+        let upperFrequency = spectrumBand.upperHz
+        let step = (upperFrequency - lowerFrequency) / Float(Self.spectrumWidth - 1)
         var lower = 0
+        var firstInCell = 0
         for column in 0..<Self.spectrumWidth {
-            let frequency = Self.lowerFrequency + (Self.upperFrequency - Self.lowerFrequency)
-                * Float(column) / Float(Self.spectrumWidth - 1)
+            let frequency = lowerFrequency + step * Float(column)
             guard frequency >= first, frequency <= last else { continue }
             while lower + 1 < frequencies.count, frequencies[lower + 1] <= frequency {
                 lower += 1
+            }
+            let cellStart = max(lowerFrequency, frequency - step * 0.5)
+            let cellEnd = min(upperFrequency, frequency + step * 0.5)
+            while firstInCell < frequencies.count, frequencies[firstInCell] < cellStart {
+                firstInCell += 1
+            }
+            var afterCell = firstInCell
+            while afterCell < frequencies.count,
+                  frequencies[afterCell] < cellEnd
+                    || (column == Self.spectrumWidth - 1 && frequencies[afterCell] <= cellEnd) {
+                afterCell += 1
+            }
+            if firstInCell < afterCell {
+                var peak: Float?
+                var cellIsAvailable = true
+                for index in firstInCell..<afterCell {
+                    let level = levels[index]
+                    let candidate: Float
+                    if level.isFinite {
+                        candidate = level
+                    } else if level == -.infinity {
+                        candidate = -160
+                    } else {
+                        cellIsAvailable = false
+                        break
+                    }
+                    peak = max(peak ?? candidate, candidate)
+                }
+                if cellIsAvailable, let peak { row[column] = SIMD2(peak, 1) }
+                continue
             }
             let upper = min(lower + 1, frequencies.count - 1)
             let nearest = frequency - frequencies[lower] <= frequencies[upper] - frequency
@@ -338,6 +414,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         guard let replacement = device.makeTexture(descriptor: descriptor) else {
             uniforms.mode.z = 0
             spectrumAvailable = false
+            diagnostics.recordTextureAllocationFailure()
             return false
         }
         pixels.withUnsafeBufferPointer { buffer in
@@ -363,9 +440,9 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         }
         let status = active ? "Updating from samples" : "Frozen"
         if presentation == .waterfall {
-            view.accessibilityLabel = "Spectrum waterfall, 18 to 22 kilohertz"
+            view.accessibilityLabel = "Spectrum waterfall, \(Int(spectrumBand.lowerHz / 1_000)) to \(Int(spectrumBand.upperHz / 1_000)) kilohertz"
             view.accessibilityValue = "\(source). \(status). Newest at top, oldest at bottom. "
-                + (spectrumAvailable ? "Measured bins in dBFS. Missing intervals are hatched."
+                + (spectrumAvailable ? "Measured bins in dBFS. Downsampled columns retain the strongest bin. Missing intervals are hatched."
                     : "No spectrum available; hatched display.")
         } else {
             view.accessibilityLabel = slice?.source == .simulated
@@ -381,23 +458,41 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
+        diagnostics.recordDrawRequest()
         guard inFlightFrames.wait(timeout: .now()) == .success else {
             redrawPending = true
+            diagnostics.recordInFlightSkip()
             return
         }
         guard let descriptor = view.currentRenderPassDescriptor,
-              let drawable = view.currentDrawable,
-              let commandBuffer = commandQueue.makeCommandBuffer(),
-              let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor)
-        else {
+              let drawable = view.currentDrawable else {
             inFlightFrames.signal()
+            diagnostics.recordNoDrawable()
+            return
+        }
+        guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+            inFlightFrames.signal()
+            diagnostics.recordCommandAllocationFailure()
+            return
+        }
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
+            inFlightFrames.signal()
+            diagnostics.recordEncoderAllocationFailure()
             return
         }
         redrawPending = false
         let semaphore = inFlightFrames
-        commandBuffer.addCompletedHandler { [weak self] _ in
+        let diagnostics = diagnostics
+        commandBuffer.addCompletedHandler { [weak self, diagnostics] buffer in
             semaphore.signal()
+            let succeeded = buffer.status == .completed
+            let systemError = buffer.error as NSError?
+            let errorDomain = systemError?.domain
+            let errorCode = systemError?.code
             Task { @MainActor [weak self] in
+                diagnostics.recordCompletion(
+                    succeeded: succeeded, errorDomain: errorDomain, errorCode: errorCode
+                )
                 guard let self, self.redrawPending else { return }
                 self.redrawPending = false
                 self.canvas?.setNeedsDisplay()
@@ -415,6 +510,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commandBuffer.present(drawable)
+        diagnostics.recordSubmittedFrame(sampleTimestamp: lastTimestamp)
         commandBuffer.commit()
     }
 }
@@ -423,8 +519,15 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
 final class ObservatoryCanvasView: UIView {
     private let metalView = MTKView(frame: .zero)
     private var renderer: MetalPhaseRenderer?
+    private let diagnostics: RendererDiagnostics
 
-    override init(frame: CGRect) {
+    override convenience init(frame: CGRect) {
+        self.init(frame: frame, diagnostics: nil)
+    }
+
+    init(frame: CGRect, diagnostics: RendererDiagnostics?) {
+        let diagnostics = diagnostics ?? RendererDiagnostics()
+        self.diagnostics = diagnostics
         super.init(frame: frame)
         clipsToBounds = true
         backgroundColor = UIColor(red: 0.016, green: 0.023, blue: 0.031, alpha: 1)
@@ -436,16 +539,19 @@ final class ObservatoryCanvasView: UIView {
             metalView.topAnchor.constraint(equalTo: topAnchor),
             metalView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
-        do { renderer = try MetalPhaseRenderer(view: metalView) }
+        do { renderer = try MetalPhaseRenderer(view: metalView, diagnostics: diagnostics) }
         catch {
             metalView.isHidden = true
             let label = UILabel()
-            label.text = "Visualization unavailable on this device.\nSignal summaries and controls remain available."
+            label.text = "Visualization unavailable.\n"
+                + (diagnostics.snapshot().lastError ?? "Renderer setup failed.")
+                + "\nOpen Diagnostics for details. Signal summaries and controls remain available."
             label.textColor = UIColor(white: 0.75, alpha: 1)
             label.font = .preferredFont(forTextStyle: .callout)
             label.adjustsFontForContentSizeCategory = true
             label.numberOfLines = 0
             label.textAlignment = .center
+            label.accessibilityIdentifier = "rendererFallback"
             label.translatesAutoresizingMaskIntoConstraints = false
             addSubview(label)
             NSLayoutConstraint.activate([
@@ -478,8 +584,11 @@ struct ObservatoryCanvas: UIViewRepresentable {
     let presentation: ObservatoryPresentation
     let active: Bool
     let reduceMotion: Bool
+    var diagnostics: RendererDiagnostics? = nil
 
-    func makeUIView(context: Context) -> ObservatoryCanvasView { ObservatoryCanvasView(frame: .zero) }
+    func makeUIView(context: Context) -> ObservatoryCanvasView {
+        ObservatoryCanvasView(frame: .zero, diagnostics: diagnostics)
+    }
 
     func updateUIView(_ view: ObservatoryCanvasView, context: Context) {
         view.update(slice: slice, spectrum: spectrum, history: history, display: display,

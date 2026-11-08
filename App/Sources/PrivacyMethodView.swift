@@ -16,11 +16,18 @@ struct PrivacyMethodView: View {
                     REPLAY reads previously captured results from memory. Every frame retains its original LIVE or DEMO source. The microphone and speaker are off during replay.
                     """)
                     section("Privacy and memory", """
-                    LIVE microphone samples can include surrounding sounds, including speech. The app analyzes acoustic phase and a spectrum; it does not transcribe speech, identify people, save audio files, or upload audio or results.
+                    LIVE microphone samples can include surrounding sounds, including speech. The app analyzes acoustic phase and a spectrum; it does not transcribe speech, identify people, save audio files, or automatically upload audio or results.
 
                     Temporary samples, up to 2,048 result frames, and bounded companion spectra remain in volatile memory. The oldest result is overwritten when the replay is full. The menu’s Clear replay action removes retained results after a capture stops. Closing the app’s process also loses the in-memory replay.
 
                     There are no accounts, advertising, analytics SDKs, tracking, or background recording. Memory-based result recording is separate from saving a raw audio file.
+                    """)
+                    section("Diagnostics you can share", """
+                    Open Diagnostics & copy report from the menu to inspect acquisition, processing, and Metal rendering during or after a run. A bounded history keeps up to 128 recent operational events in memory; older events are overwritten. Inspect JSON report previews the current report locally.
+
+                    The report includes app/build and OS information, a generic device model, audio route types and format, system output volume, run-relative intervals and sample indices, counters, aggregate input statistics, scalar analysis summaries, and sanitized error codes. It contains no raw audio samples, spectrum arrays, images, location, route names, account or network identifiers, device identifiers, or absolute system-uptime values.
+
+                    Copy Diagnostic Dump places the JSON on the local device’s clipboard only when you tap it. This copy is excluded from Handoff and expires one hour after copying. It can outlive the app’s process. You choose where to paste or share it; the app does not upload it automatically. A copy you paste elsewhere is controlled by that destination.
                     """)
                     section("You control each recording", """
                     Tap Stop at any time. Each recording is limited to 60 seconds of samples and a separate 60-second elapsed-time limit. Changing the carrier frequency does not extend either limit.
@@ -30,16 +37,20 @@ struct PrivacyMethodView: View {
                     section("Acoustic method", """
                     The built-in audio route must operate at 48 kHz. Choose a carrier from 18 to 22 kHz in 500 Hz steps. This is an acoustic experiment; the app does not measure radio-frequency signals.
 
-                    The estimator fits a tone to each 2,048-sample window, approximately 23.4 windows per second. A frequency change ends the old acquisition and constructs a new one with a fresh phase reference. Phase is not continuous across different carriers. Signal loss, invalid timing, or a capture gap invalidates the reference; recovery establishes a new zero.
+                    The estimator fits a tone to each 2,048-sample window. At 48 kHz this represents about 42.67 ms of samples. Diagnostics reports observed processing and GPU completion rates from event counts and elapsed intervals; a running session or a requested refresh rate does not prove that data is advancing. The JSON contains those counts and relative intervals rather than absolute system-clock values.
+
+                    A frequency change ends the old acquisition and constructs a new one with a fresh phase reference. Phase is not continuous across different carriers. Signal loss, invalid timing, or a capture gap invalidates the reference; recovery establishes a new zero.
 
                     Relative phase and the phase-derived displacement model depend on sound paths, device response, timing, and motion. The displacement is conditional on a single reflected-path model and is not an independently measured distance. Strong direct speaker-to-microphone coupling does not identify a reflected object.
 
-                    Tone / residual is a fitted-signal quality estimate, not calibrated acoustic SNR. Any quality score is a heuristic, not a confidence probability. Missing phase, device pose, and LiDAR depth are reported as unavailable.
+                    Tone / residual is a fitted-signal quality estimate, not calibrated acoustic SNR. Any quality score is a heuristic, not a confidence probability. Missing phase, device pose, and LiDAR depth are reported as unavailable. Unavailable phase does not mean the microphone input is empty: speech, noise, or other sound can be present without a usable carrier fit. Inspect the input level and Full audio Waterfall to distinguish those cases.
                     """)
                     section("Reading the viewport", """
                     LIVE Field is an abstract graphic of a single acoustic probe’s phase. DEMO Field is an explicitly synthetic illustration. Neither is an image, a spatial reconstruction, or a thermal measurement of your surroundings.
 
-                    Waterfall shows FFT-derived frequency bins from 18 to 22 kHz. Frequency is horizontal; sample age is vertical, with the newest data at the top. Levels are in digital dBFS. Missing intervals are hatched. Display interpolation does not add measured spectral resolution.
+                    Waterfall shows FFT-derived frequency bins from the selected source. Spectrum range selects Full audio · 0–24 kHz or Carrier · 18–22 kHz. Full audio is a display range, not a passive acquisition mode: LIVE still emits the selected carrier. Changing the range does not change the microphone capture or phase estimator.
+
+                    Frequency is horizontal; sample age is vertical, with the newest data at the top. Levels are in digital dBFS, not calibrated sound pressure. Missing intervals are hatched. Display interpolation does not add measured spectral resolution.
 
                     Gain, persistence, and false-color palettes affect only the display. They never change the microphone signal, emitted tone, synthetic sample amplitude, simulation noise, or stored measurements. Reduce Motion suppresses moving field contours, and Reduce Transparency gives instrument panels opaque backgrounds.
                     """)

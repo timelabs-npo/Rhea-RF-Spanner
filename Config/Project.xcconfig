@@ -1,8 +1,8 @@
-// Proposed bundle identifier. Registration in the Apple team is still required.
+// Registered bundle identifier for TAIMLABS, OOO. Signing assets stay outside Git.
 PRODUCT_BUNDLE_IDENTIFIER = org.timelabs.RheaRFSpanner
 PRODUCT_NAME = RheaRFSpanner
-MARKETING_VERSION = 0.2.0
-CURRENT_PROJECT_VERSION = 2
+MARKETING_VERSION = 0.2.1
+CURRENT_PROJECT_VERSION = 3
 IPHONEOS_DEPLOYMENT_TARGET = 18.0
 SWIFT_VERSION = 6.0
 SWIFT_STRICT_CONCURRENCY = complete
