@@ -23,7 +23,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Rhea RF Spanner uses the microphone only during a LIVE experiment you start to analyze its selected 18–22 kHz acoustic tone. Raw audio is processed on this device and is not recorded or uploaded. DEMO and Replay do not use the microphone.</string>
+	<string>Rhea RF Spanner uses the microphone when you start Listen or a Tone experiment. Listen analyzes sound levels and spectrum on this device without generating a tone. Tone experiment also plays the selected 18–22 kHz tone after your agreement. Raw audio is not recorded or uploaded. DEMO and Replay do not use the microphone.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

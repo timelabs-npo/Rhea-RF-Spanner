@@ -32,10 +32,13 @@ frequency band, measured quantity, and limitations that apply to it.
 | Debugging input | `debugging.txt` is a design brief for observability and independent review, not a device crash or audio trace |
 | Existing software | Isolated Swift signal core, active acoustic LIVE, silent deterministic DEMO, Waterfall, and bounded in-memory REPLAY; see [architecture](../ARCHITECTURE.md) |
 
-The next intended diagnostic release is **0.2.1 (3)**. Its version/build and
-delivery status must be confirmed in the release record before they are
-described as shipped. Successful compilation, successful installation, and
-useful hardware operation are separate observations.
+The diagnostic build **0.2.1 (3)** has since passed native validation, uploaded
+and processed as VALID; tester-group access has not been granted. G1 targets
+**0.2.2 (4)** and its latest amendments require their own validation. Current
+source/run/access details are in [the checkpoint](NEXT_SESSION.md) and the
+[G0 evidence record](../DIAGNOSTIC_RELEASE_VALIDATION.md). Successful compilation,
+Apple processing, tester access and useful hardware operation are separate
+observations.
 
 ## Milestones and exit evidence
 
@@ -115,6 +118,11 @@ existing [signal model](../SIGNAL_MODEL.md) remains the reference for the
 active acoustic estimator.
 
 ### G2: spatial observations, then spatial interpolation
+
+The [bounded G2 implementation gate](G2_SPATIAL_CONTEXT_GATE.md) separates an
+optional context preview (**G2a**) from verified audio/pose time association
+(**G2b**). It is a future design; the separate G2a work session is unintegrated
+and no spatial feature is delivered by the current candidate.
 
 Begin with camera context and AR camera pose. Add LiDAR only after a runtime
 capability check; Apple documents that `sceneDepth` is optional and must be

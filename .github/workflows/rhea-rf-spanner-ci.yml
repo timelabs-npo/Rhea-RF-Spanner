@@ -80,12 +80,13 @@ jobs:
         run: |
           set -euo pipefail
           cd "$RHEA_PROJECT_DIR"
+          python3 -m unittest discover -s scripts/tests -p 'test_capture_simulator.py' -v 2>&1 | tee build/logs/capture-gate-tests.log
           python3 scripts/capture_simulator.py 2>&1 | tee build/logs/simulator-capture.log
       - name: Preserve compiler and test logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: rhea-rf-spanner-build-${{ github.sha }}
+          name: rhea-rf-spanner-build-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             build/logs/
             build/screenshots/

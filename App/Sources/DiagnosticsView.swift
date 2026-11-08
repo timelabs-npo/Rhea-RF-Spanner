@@ -49,6 +49,15 @@ struct DiagnosticsView: View {
 
     private var session: SessionDiagnosticSnapshot { model.diagnosticSnapshot }
 
+    private var toneAnalysisStatus: String {
+        switch session.session.acquisitionKind {
+        case "tone": "Requested"
+        case "listen": "Not requested"
+        case nil: "No retained run"
+        default: "Unavailable"
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -80,12 +89,21 @@ struct DiagnosticsView: View {
 
                 Section("Acquisition → processing") {
                     row("Mode / state", session.session.mode + " / " + session.session.state)
+                    row("Acquisition kind", session.session.acquisitionKind ?? "No retained run")
+                    row("App tone enabled", session.session.transmitEnabled ? "Yes" : "No")
                     row("Flow", session.pipeline.health)
                     row("Input callbacks", session.pipeline.inputCallbacks.formatted())
                     row("Last buffer", session.pipeline.inputFramesLast.map { "\($0) samples" } ?? "Unavailable")
+                    row("Captured samples", session.pipeline.capturedSamples.formatted())
+                    row("Synthetic samples", session.pipeline.syntheticSamples.formatted())
+                    row("Source callbacks", session.pipeline.sourceCallbacks.formatted())
+                    row("Transmitted samples", session.pipeline.renderedSamples.formatted())
                     row("Processed frames", session.pipeline.processedFrames.formatted())
                     row("Spectra", session.pipeline.spectrumFrames.formatted())
-                    row("Valid phase frames", session.pipeline.validPhaseFrames.formatted())
+                    row("Tone analysis", toneAnalysisStatus)
+                    if session.session.acquisitionKind == "tone" {
+                        row("Valid phase frames", session.pipeline.validPhaseFrames.formatted())
+                    }
                     row("DSP rate", rate(session.pipeline.processedFramesPerSecond) + " frames/s")
                     row("Ring occupancy", "\(session.pipeline.ringAvailableSamples) samples")
                     row("Dropped samples", session.pipeline.droppedWriteSamples.formatted())
@@ -164,6 +182,7 @@ struct DiagnosticsView: View {
                 }
 
                 Section("Read the result") {
+                    Text("Listen requests no tone estimate and normally reports zero transmitted samples. Tone experiment and DEMO alone populate Replay.")
                     Text("If input is arriving but phase is unavailable, inspect Full audio Waterfall. Speech and other sound can be present without a coherent 18–22 kHz carrier.")
                     Text("DEMO uses the same processing and display path with synthetic samples. It can isolate software faults without microphone permission or speaker output.")
                     Text("Rates measure actual processed or completed frames over a recent interval. They are not the screen refresh rate. Digital levels are not calibrated sound pressure.")

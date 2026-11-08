@@ -72,7 +72,9 @@ frequency band is selectable: **Full audio · 0–24 kHz** or **Carrier · 18–
 bounded by available FFT bins. Ordinary launch defaults to full-band Waterfall.
 When multiple FFT bins occupy one display column, the strongest measured bin is
 retained so a narrow peak does not disappear during display downsampling.
-This changes the display only; LIVE still emits the selected acoustic carrier.
+This changes the display only. LIVE emits the selected acoustic carrier only
+in an explicitly selected and started **Tone** experiment; **Listen** generates
+no tone.
 
 Spectral rows are ordered oldest to newest in application history; the
 renderer places the newest row according to its labelled time axis. A new

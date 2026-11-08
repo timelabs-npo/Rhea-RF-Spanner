@@ -25,44 +25,69 @@ struct ExperimentView: View {
         GeometryReader { geometry in
             let needsScroll = dynamicTypeSize >= .xxLarge || geometry.size.height < 600 || geometry.size.width < 340
             Group {
-                if needsScroll {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            topChrome
-                            viewport(overlayControls: false)
-                                .frame(height: dynamicTypeSize.isAccessibilitySize ? 600 : dynamicTypeSize >= .xxLarge ? 430 : 340)
-                            if showControls { controlPanel }
-                            consentPanel
-                            transport
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: 720)
-                        .frame(maxWidth: .infinity)
+                if !needsScroll && model.presentation == .field {
+                    // Prefer the immersive field only when its actual content
+                    // fits. Longer controls/consent fall back to scrolling.
+                    ViewThatFits(in: .vertical) {
+                        immersiveFieldContent
+                        scrollingContent
                     }
                 } else {
-                    VStack(spacing: 10) {
-                        topChrome.padding(.horizontal, 14)
-                        viewport(overlayControls: model.presentation == .field)
-                            .frame(maxHeight: .infinity)
-                            .padding(.horizontal, 8)
-                        if showControls && model.presentation == .waterfall {
-                            controlPanel.padding(.horizontal, 12)
-                        }
-                        consentPanel.padding(.horizontal, 16)
-                        transport.padding(.horizontal, 20)
-                    }
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
+                    scrollingContent
                 }
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            transport
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
+                .background(Color.black)
+        }
         .background(Color.black.ignoresSafeArea())
         .tint(accent)
+        .onChange(of: model.isListening, initial: true) { _, isListening in
+            if isListening && adjustment == .carrier { adjustment = .display }
+        }
         .sheet(isPresented: $showPrivacy) { PrivacyMethodView() }
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView(model: model, renderer: rendererDiagnostics)
         }
+    }
+
+    private var scrollingContent: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                topChrome
+                // Consent stays near the acquisition selector. Reviewing it
+                // cannot push the primary action below the screen.
+                consentPanel
+                viewport(overlayControls: false)
+                    .frame(minHeight: dynamicTypeSize.isAccessibilitySize ? 600 : dynamicTypeSize >= .xxLarge ? 430 : 340)
+                if showControls { controlPanel }
+                sessionMessage
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("observatoryScrollContent")
+    }
+
+    private var immersiveFieldContent: some View {
+        VStack(spacing: 10) {
+            topChrome.padding(.horizontal, 14)
+            viewport(overlayControls: true)
+                .frame(minHeight: 420, maxHeight: .infinity)
+                .padding(.horizontal, 8)
+            consentPanel.padding(.horizontal, 16)
+            sessionMessage.padding(.horizontal, 20)
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 4)
     }
 
     private var topChrome: some View {
@@ -122,6 +147,16 @@ struct ExperimentView: View {
             }
             .padding(4)
             .background(Color(white: 0.08), in: RoundedRectangle(cornerRadius: 14))
+            if model.mode == .live {
+                Picker("LIVE acquisition", selection: Binding(
+                    get: { model.acquisitionKind }, set: { model.selectAcquisitionKind($0) }
+                )) {
+                    Text("Listen").tag(AcquisitionKind.listen)
+                    Text("Tone experiment").tag(AcquisitionKind.tone)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("acquisitionKindPicker")
+            }
         }
     }
 
@@ -131,10 +166,10 @@ struct ExperimentView: View {
                 Button { showDiagnostics = true } label: {
                     Label("Diagnostics & copy report", systemImage: "doc.text.magnifyingglass")
                 }
-                Toggle("Phase readout", isOn: $showReadout)
+                if model.phaseControlsAvailable { Toggle("Phase readout", isOn: $showReadout) }
                 Picker("Spectrum range", selection: $model.displayParameters.spectrumBand) {
                     ForEach(SpectrumDisplayBand.allCases, id: \.rawValue) { band in
-                        Text(band.displayName).tag(band)
+                        Text(bandTitle(band)).tag(band)
                     }
                 }
                 Picker("False-color palette", selection: $model.displayParameters.palette) {
@@ -180,13 +215,13 @@ struct ExperimentView: View {
                         presentation: model.presentation,
                         active: model.isVisualizing,
                         reduceMotion: reduceMotion,
-                        diagnostics: rendererDiagnostics
+                        diagnostics: rendererDiagnostics,
+                        audioIdentity: model.latestAudioIdentity
                     )
                     .accessibilityIdentifier("observatoryCanvas")
                     VStack(spacing: 12) {
                         viewportHeader
                         Spacer(minLength: 8)
-                        if !(overlayControls && showControls) { fieldCaption }
                         if overlayControls && showControls { controlPanel }
                     }
                     .padding(12)
@@ -205,11 +240,11 @@ struct ExperimentView: View {
             if dynamicTypeSize >= .xxLarge {
                 VStack(alignment: .leading, spacing: 12) {
                     viewportStatus
-                    if showReadout { phaseReadout }
+                    if showReadout && model.phaseControlsAvailable { phaseReadout }
                 }
             } else {
                 HStack(alignment: .top, spacing: 10) {
-                    if showReadout { phaseReadout }
+                    if showReadout && model.phaseControlsAvailable { phaseReadout }
                     Spacer(minLength: 0)
                     viewportStatus
                 }
@@ -235,6 +270,9 @@ struct ExperimentView: View {
                     .padding(.vertical, 7)
                     .modifier(InstrumentSurface(cornerRadius: 12))
             }
+            // Source and presentation remain explicit even with controls open.
+            fieldCaption
+                .frame(maxWidth: .infinity)
         }
     }
 
@@ -246,7 +284,7 @@ struct ExperimentView: View {
                 .tracking(0.6)
                 .foregroundStyle(accent)
                 .multilineTextAlignment(.trailing)
-            Text(model.isRunning ? "● REC  " + clockText : model.isReplaying ? "PLAYBACK" : "STANDBY")
+            Text(model.isRunning ? "● " + (model.isListening ? "LISTEN  " : "REC  ") + clockText : model.isReplaying ? "PLAYBACK" : model.latestAudioIdentity != nil || model.latestSlice != nil ? "STOPPED DATA" : "STANDBY")
                 .font(.caption2.monospacedDigit().weight(.medium))
                 .foregroundStyle(model.isRunning ? Color(red: 1, green: 0.4, blue: 0.3) : .white)
             Text(model.measuredAcquisitionText)
@@ -285,7 +323,7 @@ struct ExperimentView: View {
 
     private var presentationSelector: some View {
         HStack(spacing: 3) {
-            presentationButton(.field, title: "FIELD")
+            if model.phaseControlsAvailable { presentationButton(.field, title: "FIELD") }
             presentationButton(.waterfall, title: "WATERFALL")
         }
         .padding(3)
@@ -336,7 +374,7 @@ struct ExperimentView: View {
         .font(.caption2.monospacedDigit())
         .foregroundStyle(subdued)
         .padding(.vertical, 4)
-        .accessibilityLabel("Frequency axis, " + model.displayParameters.spectrumBand.displayName)
+        .accessibilityLabel("Frequency axis, " + bandTitle(model.displayParameters.spectrumBand))
     }
 
     private var timeAxis: some View {
@@ -393,14 +431,16 @@ struct ExperimentView: View {
             }
             switch adjustment {
             case .carrier:
-                if model.mode == .replay { replayPanel } else { carrierPanel }
+                if model.mode == .replay { replayPanel }
+                else if model.isListening { displayPanel }
+                else { carrierPanel }
             case .display:
                 displayPanel
             case .readout:
                 detailedReadout
             }
             HStack(spacing: 0) {
-                adjustmentButton(.carrier, title: model.mode == .replay ? "Timeline" : "Carrier")
+                if !model.isListening { adjustmentButton(.carrier, title: model.mode == .replay ? "Timeline" : "Carrier") }
                 adjustmentButton(.display, title: "Display")
                 adjustmentButton(.readout, title: "Readout")
             }
@@ -409,6 +449,7 @@ struct ExperimentView: View {
         .padding(.top, 8)
         .padding(.bottom, 10)
         .modifier(InstrumentSurface(cornerRadius: 24))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var carrierPanel: some View {
@@ -469,7 +510,7 @@ struct ExperimentView: View {
         VStack(spacing: 10) {
             Picker("Spectrum range", selection: $model.displayParameters.spectrumBand) {
                 ForEach(SpectrumDisplayBand.allCases, id: \.rawValue) { band in
-                    Text(band.displayName).tag(band)
+                    Text(bandTitle(band)).tag(band)
                 }
             }
             .pickerStyle(.menu)
@@ -517,16 +558,23 @@ struct ExperimentView: View {
 
     private var detailedReadout: some View {
         VStack(alignment: .leading, spacing: 8) {
-            readoutRow("Phase-derived model", value: model.phaseDerivedDisplacementMillimeters.map { number($0, places: 2) + " mm" } ?? "Unavailable")
-            readoutRow("Tone / residual", value: qualityText + " dB")
-            readoutRow("Carrier amplitude", value: amplitudeText)
-            readoutRow("Pose / depth", value: "Unavailable")
-            Text(model.referenceMessage)
-                .font(.caption2)
-                .foregroundStyle(subdued)
-            Text("\(model.replayCount.formatted()) / \(model.replayCapacity.formatted()) frames stored")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(subdued)
+            if model.isListening {
+                Text("Microphone analysis · no generated tone")
+                Text(model.inputLevelText).monospacedDigit()
+                Text("Tone analysis not requested. Listen is not saved to Replay.")
+                    .font(.caption2).foregroundStyle(subdued)
+            } else {
+                readoutRow("Phase-derived model", value: model.phaseDerivedDisplacementMillimeters.map { number($0, places: 2) + " mm" } ?? "Unavailable")
+                readoutRow("Tone / residual", value: qualityText + " dB")
+                readoutRow("Carrier amplitude", value: amplitudeText)
+                readoutRow("Pose / depth", value: "Unavailable")
+                Text(model.referenceMessage)
+                    .font(.caption2)
+                    .foregroundStyle(subdued)
+                Text("\(model.replayCount.formatted()) / \(model.replayCapacity.formatted()) Tone/DEMO frames stored")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(subdued)
+            }
         }
     }
 
@@ -592,7 +640,12 @@ struct ExperimentView: View {
     private var consentPanel: some View {
         if model.mode == .live && !model.isRunning {
             VStack(alignment: .leading, spacing: 7) {
-                if model.liveIsSupported {
+                if model.liveIsSupported && model.isListening {
+                    Text("Microphone analysis · no generated tone")
+                        .font(.caption)
+                    Text("Local analysis · built-in microphone · 60 s max. Listening may interrupt other playback on this phone. Only the optional diagnostic report can be copied.")
+                        .font(.caption2).foregroundStyle(subdued)
+                } else if model.liveIsSupported {
                     Toggle("I agree to a speaker tone and live microphone analysis.", isOn: $model.consentGiven)
                         .font(.caption)
                         .disabled(model.state != .idle)
@@ -614,48 +667,51 @@ struct ExperimentView: View {
     }
 
     private var transport: some View {
-        VStack(spacing: 8) {
-            HStack(alignment: .center, spacing: 16) {
-                Button { setControlsVisible(!showControls) } label: {
-                    VStack(spacing: 5) {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.title3)
-                            .frame(width: 48, height: 48)
-                            .background(showControls ? accent.opacity(0.2) : Color(white: 0.12), in: Circle())
-                        Text("Adjust").font(.caption2)
+        HStack(alignment: .center, spacing: 16) {
+            Button { setControlsVisible(!showControls) } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.title3)
+                        .frame(width: 48, height: 48)
+                        .background(showControls ? accent.opacity(0.2) : Color(white: 0.12), in: Circle())
+                    Text("Adjust").font(.caption2)
+                }
+                .foregroundStyle(showControls ? accent : .white)
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(showControls ? "Hide instrument controls" : "Show instrument controls")
+            VStack(spacing: 5) {
+                Button(action: transportAction) {
+                    ZStack {
+                        Circle().stroke(.white.opacity(0.7), lineWidth: 2).frame(width: 74, height: 74)
+                        Circle().fill(model.mode == .replay ? accent : Color(red: 0.94, green: 0.18, blue: 0.12))
+                            .frame(width: 64, height: 64)
+                        if model.mode == .replay {
+                            Image(systemName: model.isReplaying ? "pause.fill" : "play.fill")
+                                .font(.title2.weight(.semibold))
+                                .foregroundStyle(.black)
+                        } else if model.isRunning || model.state == .preparing {
+                            RoundedRectangle(cornerRadius: 4).fill(.white).frame(width: 25, height: 25)
+                        } else if model.state == .requestingPermission {
+                            ProgressView().tint(.white)
+                        }
                     }
-                    .foregroundStyle(showControls ? accent : .white)
-                    .frame(maxWidth: .infinity)
+                    .opacity(transportEnabled ? 1 : 0.4)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(showControls ? "Hide instrument controls" : "Show instrument controls")
-                VStack(spacing: 5) {
-                    Button(action: transportAction) {
-                        ZStack {
-                            Circle().stroke(.white.opacity(0.7), lineWidth: 2).frame(width: 74, height: 74)
-                            Circle().fill(model.mode == .replay ? accent : Color(red: 0.94, green: 0.18, blue: 0.12))
-                                .frame(width: 64, height: 64)
-                            if model.mode == .replay {
-                                Image(systemName: model.isReplaying ? "pause.fill" : "play.fill")
-                                    .font(.title2.weight(.semibold))
-                                    .foregroundStyle(.black)
-                            } else if model.isRunning || model.state == .preparing {
-                                RoundedRectangle(cornerRadius: 4).fill(.white).frame(width: 25, height: 25)
-                            } else if model.state == .requestingPermission {
-                                ProgressView().tint(.white)
-                            }
-                        }
-                        .opacity(transportEnabled ? 1 : 0.4)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!transportEnabled)
-                    .accessibilityLabel(transportTitle)
-                    .accessibilityIdentifier(model.isRunning ? "stopExperimentButton" : "startExperimentButton")
-                    Text(transportTitle.uppercased())
-                        .font(.caption2.weight(.semibold))
-                        .tracking(0.8)
-                }
-                .frame(maxWidth: .infinity)
+                .disabled(!transportEnabled)
+                .accessibilityLabel(transportTitle)
+                .accessibilityIdentifier(model.isRunning ? "stopExperimentButton" : "startExperimentButton")
+                Text(transportTitle.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .tracking(0.8)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("primaryTransportTitle")
+            }
+            .frame(maxWidth: .infinity)
+            if model.phaseControlsAvailable {
                 Button { model.resetPhaseReference() } label: {
                     VStack(spacing: 5) {
                         Image(systemName: "scope")
@@ -670,7 +726,19 @@ struct ExperimentView: View {
                 .disabled(!model.isRunning)
                 .accessibilityLabel("Set a new phase reference")
                 .accessibilityIdentifier("resetPhaseReferenceButton")
+            } else {
+                // Keep Start/Stop centered when Listen has no reference action.
+                Color.clear.frame(height: 1)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
             }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityIdentifier("transportDock")
+    }
+
+    private var sessionMessage: some View {
+        VStack(spacing: 8) {
             Text(model.message)
                 .font(.caption2)
                 .foregroundStyle(subdued)
@@ -703,11 +771,11 @@ struct ExperimentView: View {
     private var transportTitle: String {
         if model.mode == .replay { return model.isReplaying ? "Pause" : "Play replay" }
         if model.state == .requestingPermission { return "Cancel" }
-        return model.isRunning || model.state == .preparing ? "Stop" : "Record"
+        return model.isRunning || model.state == .preparing ? "Stop" : model.isListening ? "Start listening" : "Record"
     }
     private var panelTitle: String {
         switch adjustment {
-        case .carrier: return model.mode == .replay ? "Replay timeline" : "Acoustic carrier"
+        case .carrier: return model.mode == .replay ? "Replay timeline" : model.isListening ? "Display adjustments" : "Acoustic carrier"
         case .display: return "Display adjustments"
         case .readout: return "Signal readout"
         }
@@ -724,6 +792,7 @@ struct ExperimentView: View {
             return "REPLAY · " + model.replaySourceName.uppercased()
         }
         if sourceIsSimulated { return "DEMO · SYNTHETIC" }
+        if model.isListening { return "LIVE · LISTEN" }
         return model.presentation == .field ? "LIVE · ABSTRACT" : "LIVE · ACOUSTIC"
     }
     private var phaseText: String {
@@ -745,9 +814,13 @@ struct ExperimentView: View {
     }
     private var historyAgeText: String {
         guard let oldest = model.spectrumHistory.first?.sampleTimestamp,
-              let newest = model.latestSlice?.sampleTimestamp ?? model.latestSpectrum?.sampleTimestamp,
+              let newest = model.latestAudioIdentity?.sampleTimestamp ?? model.latestSlice?.sampleTimestamp ?? model.latestSpectrum?.sampleTimestamp,
               newest >= oldest else { return "—" }
         return number(Double(newest - oldest) / 48_000, places: 1)
+    }
+
+    private func bandTitle(_ band: SpectrumDisplayBand) -> String {
+        model.isListening && band == .carrier ? "18–22 kHz" : band.displayName
     }
 
     private func setControlsVisible(_ visible: Bool) {

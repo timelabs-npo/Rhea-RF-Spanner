@@ -1,4 +1,4 @@
-# Diagnostic candidate 0.2.1 (3): evidence record
+# Diagnostic build 0.2.1 (3): evidence record
 
 ## Scope and starting evidence
 
@@ -18,8 +18,9 @@ capture, external probes or inter-device synchronization.
 - Starting main: `4be8724f244cd2e478f5d6877f798986fcaa2ae9`.
 - Initial candidate: `ca4442415728cbf4f3e1721b8b1e5015a0cebc57`.
 - Independent-review corrections: `d5425d10c686575a8ad95021b9bd5120a3db5765`.
-- Latest native-verified G0 source: `722ee840ae8f72d01cec0a3016fa8f52320726c4`.
-- Review branch: [PR #3](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/3).
+- Final native-verified G0 source: `d4903b847e610761a4d9c7f94ee58e889a4d6d31`.
+- Review: [PR #3](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/3),
+  merged into main at `3f7716`.
 - Project tracking: [issue #2](https://github.com/timelabs-npo/Rhea-RF-Spanner/issues/2).
 
 A bounded Codex Full Access implementation session on WD created portable
@@ -28,12 +29,12 @@ exited 0 after 433.57 seconds. A separate read-only Codex review of the exact
 initial candidate exited 0 after 214.67 seconds. Session IDs and complete outputs
 are retained on WD; their existence is not treated as proof of compilation.
 
-All three WD Codex sessions have completed. The separate G1 Listen implementation
+The G0 implementation/review sessions completed. The separate G1 Listen implementation
 session `01a1b8d8-4802-7141-b421-899b250ca717` exited 0 after 674.7667 seconds at
 `2026-11-08T02:00:18Z` (05:00:18 Europe/Moscow). Its work was imported into an
 isolated G1 integration tree and received independent review corrections. G1
-targets **0.2.2 (4)**; its native validation remains pending and is separate from
-the G0 evidence below.
+targets **0.2.2 (4)**. Its first native run and pending amendments are recorded
+in [the G1 evidence record](PASSIVE_AUDIO_VALIDATION.md), separately from G0.
 
 The Windows/WSL attempt to run Swift stopped with `swift: Permission denied`
 before compilation. No Swift, Simulator, Metal-runtime or device test pass is
@@ -121,23 +122,41 @@ that stops while input callbacks continue. A supplied clock and recording audio
 adapter exercise the production model's watchdog/stop path without opening
 hardware; production permission and explicit-start rules are unchanged.
 
-The amended source requires its own exact-candidate native CI run before merge
-or upload; the successful `722ee840` run does not validate these later changes.
+These changes received the exact-source native run recorded below; they are not
+attributed to the earlier successful `722ee840` run.
 
 ## Final candidate and delivery
 
-The latest verified source is `722ee840ae8f72d01cec0a3016fa8f52320726c4`.
-The subsequent review corrections remain the release gate. Record their final
-source SHA, actual CI results, inspected captures and run URL before merging or
-dispatching distribution; do not substitute an earlier commit's pass.
+[Run 42438050312](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438050312)
+**succeeded** for final G0 source
+`d4903b847e610761a4d9c7f94ee58e889a4d6d31`. Actual logs record **63 core
+tests and 21 Simulator-hosted tests, with zero failures**. The hosted tests
+comprise 9 diagnostics, 10 renderer and 2 lifecycle tests. Core Release,
+Simulator Debug and unsigned device Release builds passed; four native PNG
+captures were generated. PR #3 then merged into main at `3f7716`.
 
-No 0.2.1 (3) upload has been dispatched at this checkpoint. A read-only
-App Store Connect check at `2026-11-08T01:43:07Z` found only 0.2.0 (2), processed
-as VALID. It confirmed the existing internal tester group and existing API
-credential access without creating a new key or a cleartext key file.
+[Upload run 42438984196](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438984196)
+**succeeded** for **0.2.1 (3)**. A read-only App Store Connect observation at
+`2026-11-08T02:39:50Z` (05:39:50 Europe/Moscow) recorded:
+
+| Apple field | Observed value |
+| --- | --- |
+| Build ID | `fbe064d5-c57a-4853-9d40-c0a64b1d3705` |
+| Processing state | `VALID` |
+| Upload state | `COMPLETE` |
+| Errors / warnings | `[]` / `[]` |
+| Internal tester-group association | **Not assigned** |
+
+Automatic approval review rejected granting the existing **Rhea RF Spanner
+Internal** group access to this build because the upload authorization did not
+explicitly include the recipient access scope. No tester access was granted by
+that action. Do not retry group assignment without explicit authorization for
+that access grant. Successful upload/processing does not establish that testers
+can install this build.
 
 Physical microphone/tone behavior, interruptions/routes, acoustic sensitivity,
 calibration and the original user-reported defect remain unverified. The
-smallest next device experiment is a short explicit LIVE run followed by Stop
+smallest next device experiment, after authorized tester access, is a short
+explicit LIVE run followed by Stop
 and Copy Diagnostic Dump, comparing input callbacks/samples, processing,
 spectrum, renderer completions, timing validity and stop reason.

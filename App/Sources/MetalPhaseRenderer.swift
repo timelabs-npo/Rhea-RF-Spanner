@@ -6,6 +6,14 @@ import RheaRFCore
 import SwiftUI
 import UIKit
 
+/// Capture identity does not imply a carrier or a phase estimate.
+struct AudioFrameIdentity: Sendable, Equatable {
+    let sampleTimestamp: UInt64
+    let runID: UInt64
+    let source: ObservationSource
+    let acquisitionKind: AcquisitionKind
+}
+
 private enum MetalSetupError: Error {
     case unavailable
     case shaderUnavailable
@@ -42,6 +50,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         let frames: [SpectrumFrame]
         let end: UInt64?
         let band: SpectrumDisplayBand
+        let currentSpectrumUnavailable: Bool
     }
 
     private struct CachedSpectrumRow {
@@ -60,6 +69,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
     private var uniforms = Uniforms()
     private var fieldSamples: [FieldSample] = []
     private var lastTimestamp: UInt64?
+    private var lastAudioRunID: UInt64?
     private var lastEpoch: UInt32?
     private var lastSource: UInt8?
     private var historyIdentity: HistoryIdentity?
@@ -147,10 +157,12 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         display: DisplayParameters,
         presentation: ObservatoryPresentation,
         active: Bool,
-        reduceMotion: Bool
+        reduceMotion: Bool,
+        audioIdentity: AudioFrameIdentity? = nil
     ) {
-        let newTimestamp = slice?.sampleTimestamp
+        let newTimestamp = audioIdentity?.sampleTimestamp ?? slice?.sampleTimestamp
         let contextChanged = slice?.epoch != lastEpoch || slice?.source.rawValue != lastSource
+            || audioIdentity?.runID != lastAudioRunID
         let rewound = newTimestamp.map { timestamp in
             lastTimestamp.map { timestamp < $0 } ?? false
         } ?? false
@@ -186,6 +198,7 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
             fieldSamples.removeAll(keepingCapacity: true)
         }
         lastTimestamp = newTimestamp
+        lastAudioRunID = audioIdentity?.runID
         lastEpoch = slice?.epoch
         lastSource = slice?.source.rawValue
 
@@ -208,18 +221,23 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         }
         uniforms.mode.x = presentation == .waterfall ? 1 : 0
         if presentation == .waterfall {
-            prepareWaterfall(history: history, spectrum: spectrum, endTimestamp: newTimestamp)
+            prepareWaterfall(
+                history: history, spectrum: spectrum, endTimestamp: newTimestamp,
+                currentSpectrumUnavailable: (audioIdentity != nil || slice != nil) && spectrum == nil
+            )
         }
         diagnostics.recordSpectrumAvailability(spectrumAvailable)
         updateAccessibility(view: view, slice: slice, presentation: presentation,
-                            phaseValid: phaseValid, active: active, reduceMotion: reduceMotion)
+                            phaseValid: phaseValid, active: active, reduceMotion: reduceMotion,
+                            audioIdentity: audioIdentity)
         view.setNeedsDisplay()
     }
 
     /// History is oldest-first. Texture row zero is newest. The vertical scale
     /// follows sample timestamps, so dropped capture intervals remain missing.
     private func prepareWaterfall(
-        history: [SpectrumFrame], spectrum: SpectrumFrame?, endTimestamp: UInt64?
+        history: [SpectrumFrame], spectrum: SpectrumFrame?, endTimestamp: UInt64?,
+        currentSpectrumUnavailable: Bool
     ) {
         var byTimestamp: [UInt64: SpectrumFrame] = [:]
         for frame in history.suffix(Self.maximumHistory) {
@@ -228,11 +246,21 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         // The explicit current spectrum takes precedence even when its sample
         // timestamp is identical to a different record already in history.
         if let spectrum { byTimestamp[spectrum.sampleTimestamp] = spectrum }
+        if currentSpectrumUnavailable, let endTimestamp {
+            // An explicit current frame with no spectrum is missing data.
+            // A prior observation at the same index cannot fill its row after
+            // a clock rewind/repetition. The model separately clears history
+            // at the boundary so older observations cannot cross clock epochs.
+            byTimestamp.removeValue(forKey: endTimestamp)
+        }
         let end = endTimestamp ?? spectrum?.sampleTimestamp ?? history.last?.sampleTimestamp
         var frames = byTimestamp.values.sorted { $0.sampleTimestamp < $1.sampleTimestamp }
         if let end { frames.removeAll { $0.sampleTimestamp > end } }
         frames = Array(frames.suffix(Self.maximumHistory))
-        let identity = HistoryIdentity(frames: frames, end: end, band: spectrumBand)
+        let identity = HistoryIdentity(
+            frames: frames, end: end, band: spectrumBand,
+            currentSpectrumUnavailable: currentSpectrumUnavailable
+        )
         guard identity != historyIdentity else { return }
 
         let retainedTimestamps = Set(frames.map(\.sampleTimestamp))
@@ -275,6 +303,10 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
         var missingIndex = 0
         var hasValidPixels = false
         for row in 0..<height {
+            // The newest row belongs to the explicit current observation.
+            // A nearby historical window is not a replacement when this one
+            // has no spectrum, including gaps smaller than one analysis hop.
+            if row == 0 && currentSpectrumUnavailable { continue }
             let targetAge = rowStep * Double(row)
             let intervalStart = max(0, targetAge - rowStep * 0.5)
             let intervalEnd = min(span, targetAge + rowStep * 0.5)
@@ -430,10 +462,18 @@ final class MetalPhaseRenderer: NSObject, MTKViewDelegate {
 
     private func updateAccessibility(
         view: MTKView, slice: SpatioTemporalSlice?, presentation: ObservatoryPresentation,
-        phaseValid: Bool, active: Bool, reduceMotion: Bool
+        phaseValid: Bool, active: Bool, reduceMotion: Bool,
+        audioIdentity: AudioFrameIdentity?
     ) {
         let source: String
-        if let slice {
+        if let audioIdentity {
+            if audioIdentity.source == .simulated {
+                source = "Synthetic fixture data"
+            } else {
+                source = audioIdentity.acquisitionKind == .listen
+                    ? "Microphone data · Listen · no generated tone" : "Microphone data · Tone experiment"
+            }
+        } else if let slice {
             source = slice.source == .simulated ? "Simulated data" : "Microphone data"
         } else {
             source = "No samples"
@@ -571,10 +611,11 @@ final class ObservatoryCanvasView: UIView {
     func update(
         slice: SpatioTemporalSlice?, spectrum: SpectrumFrame?, history: [SpectrumFrame],
         display: DisplayParameters, presentation: ObservatoryPresentation,
-        active: Bool, reduceMotion: Bool
+        active: Bool, reduceMotion: Bool, audioIdentity: AudioFrameIdentity? = nil
     ) {
         renderer?.update(view: metalView, slice: slice, spectrum: spectrum, history: history,
-                         display: display, presentation: presentation, active: active, reduceMotion: reduceMotion)
+                         display: display, presentation: presentation, active: active, reduceMotion: reduceMotion,
+                         audioIdentity: audioIdentity)
     }
 }
 
@@ -589,6 +630,7 @@ struct ObservatoryCanvas: UIViewRepresentable {
     let active: Bool
     let reduceMotion: Bool
     var diagnostics: RendererDiagnostics? = nil
+    var audioIdentity: AudioFrameIdentity? = nil
 
     func makeUIView(context: Context) -> ObservatoryCanvasView {
         ObservatoryCanvasView(frame: .zero, diagnostics: diagnostics)
@@ -596,6 +638,7 @@ struct ObservatoryCanvas: UIViewRepresentable {
 
     func updateUIView(_ view: ObservatoryCanvasView, context: Context) {
         view.update(slice: slice, spectrum: spectrum, history: history, display: display,
-                    presentation: presentation, active: active, reduceMotion: reduceMotion)
+                    presentation: presentation, active: active, reduceMotion: reduceMotion,
+                    audioIdentity: audioIdentity)
     }
 }
