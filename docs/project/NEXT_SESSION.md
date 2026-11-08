@@ -71,23 +71,23 @@ a later stage is still pending. Do not fill a field from expectation.
 
 | Field | Latest checkpoint |
 | --- | --- |
-| Observed at | `2026-11-08T04:37:38+03:00` (Europe/Moscow) |
+| Observed at | `2026-11-08T04:52:57+03:00` (Europe/Moscow) |
 | Coordinator / session | ChatGPT coordinator; bounded WD Codex implementation completed |
 | Active objective / gate | G0 diagnostics and LIVE repair |
 | Remote base at session start | `4be8724f244cd2e478f5d6877f798986fcaa2ae9`; refresh before editing |
-| Working branch / exact commit | `work/diagnostics-0.2.1`; candidate commit/publication pending |
+| Working branch / exact commit | `work/diagnostics-0.2.1`; initial `ca4442415728cbf4f3e1721b8b1e5015a0cebc57`, review fixes `d5425d10c686575a8ad95021b9bd5120a3db5765`; final layout/test-fixture correction pending |
 | Working directory / owner | Isolated integration worktree; coordinator owns publication, other writers have finished |
 | Changed paths / uncommitted work | App diagnostic UI and runtime, renderer, portable diagnostics/self-test, hosted/core regressions, generated project, version configuration, English docs |
 | Confirmed defect and reproduction | Static audit: startup status claimed activity before input, fixed nominal rate label, silent renderer failures, no preserved stage evidence. No hardware root cause established |
 | Hypotheses still open | Physical-device failure mechanism; no diagnostic report yet |
 | Implemented changes | Measured stage counters, bounded event log, local JSON preview/copy, silent analytical self-test, LIVE stall stop reason, full-band Waterfall with peak-preserving downsampling |
-| Automated validation / run URLs | pending for the new candidate |
-| Independent review / examined commit | Integrated uncommitted diff reviewed by a separate session; event timestamps across runs corrected. Exact committed/native review remains pending |
+| Automated validation / run URLs | Initial [run 42435212237](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42435212237): 61 core + 13 hosted tests passed, both iOS builds and four native captures passed. Exact amended-source run pending; see [validation record](../DIAGNOSTIC_RELEASE_VALIDATION.md) |
+| Independent review / examined commit | Separate local integration review and WD Codex review of exact `ca4442415728cbf4f3e1721b8b1e5015a0cebc57`; event clocks, Unicode byte caps, delayed GPU accounting and privacy wording addressed |
 | Candidate version / build | intended `0.2.1` / `3`; verify before dispatch |
 | Apple validation / upload / processing | pending for the new candidate |
 | TestFlight group / tester state | pending for the new candidate |
 | Physical-device observations | Installation/testing of build 2 reported; candidate checks pending |
-| Running jobs / session IDs / last checked | WD Codex implementation exited 0 after 433.57 seconds; its output and session ID are retained on WD. No native CI for this candidate has started yet |
+| Running jobs / session IDs / last checked | WD diagnostic implementation and independent review completed. A new isolated WD Codex G1 Listen implementation session is running; its live status and session ID are retained in the WD checkpoint. Coordinator owns its later review/publication. Final G0 CI remains the immediate release gate |
 | Blocker / smallest next action | Obtain a useful diagnostic report after the candidate is installed |
 
 Use explicit time zones in evidence. Machine logs can retain UTC; user-facing

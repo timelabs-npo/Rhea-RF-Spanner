@@ -4,6 +4,13 @@ import RheaRFCore
 import XCTest
 @testable import RheaRFSpanner
 
+@MainActor
+private final class RendererTestClock {
+    var now: TimeInterval
+
+    init(now: TimeInterval) { self.now = now }
+}
+
 /// Inspect the actual uploaded shared texture, so these regressions cover
 /// invalidation, row caching, temporal resampling, and upload together.
 @MainActor
@@ -160,11 +167,11 @@ final class ObservatoryRendererTests: XCTestCase {
     }
 
     func testCompletionRateExcludesFailuresAndExportsOnlyElapsedInterval() throws {
-        var clock: TimeInterval = 500
-        let diagnostics = RendererDiagnostics(clock: { clock })
+        let clock = RendererTestClock(now: 500)
+        let diagnostics = RendererDiagnostics(clock: { clock.now })
         diagnostics.recordSubmittedFrame(sampleTimestamp: 0)
         diagnostics.recordCompletion(succeeded: true)
-        clock = 500.5
+        clock.now = 500.5
         diagnostics.recordSubmittedFrame(sampleTimestamp: hop)
         diagnostics.recordCompletion(succeeded: false, errorDomain: "private/path/example", errorCode: 7)
         let snapshot = diagnostics.snapshot()
@@ -183,21 +190,21 @@ final class ObservatoryRendererTests: XCTestCase {
         XCTAssertEqual(json["frameRateWindowSeconds"] as? Double, 0.5)
         XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("private/path"))
 
-        clock = 502.25
+        clock.now = 502.25
         let expired = diagnostics.snapshot()
         XCTAssertEqual(expired.completedFrames, 1)
         XCTAssertEqual(expired.completedFramesInWindow, 0)
         XCTAssertEqual(expired.measuredCompletedFramesPerSecond, 0)
         // Clock faults must not poison JSON with a nonfinite elapsed interval.
-        clock = .infinity
+        clock.now = .infinity
         XCTAssertNoThrow(try JSONEncoder().encode(diagnostics.snapshot()))
     }
 
     func testDelayedActorDeliveryDoesNotMakeAnExpiredCompletionRecent() throws {
-        var clock: TimeInterval = 500
-        let diagnostics = RendererDiagnostics(clock: { clock })
+        let clock = RendererTestClock(now: 500)
+        let diagnostics = RendererDiagnostics(clock: { clock.now })
         // Metal completed at t=500; MainActor could only handle it at t=503.
-        clock = 503
+        clock.now = 503
         diagnostics.recordCompletion(succeeded: true, completedAt: 500)
         let snapshot = diagnostics.snapshot()
         XCTAssertEqual(snapshot.completedFrames, 1)
@@ -211,9 +218,9 @@ final class ObservatoryRendererTests: XCTestCase {
     }
 
     func testOutOfOrderCompletionCannotOverwriteANewerCircularBucket() {
-        var clock: TimeInterval = 500
-        let diagnostics = RendererDiagnostics(clock: { clock })
-        clock = 503
+        let clock = RendererTestClock(now: 500)
+        let diagnostics = RendererDiagnostics(clock: { clock.now })
+        clock.now = 503
         diagnostics.recordCompletion(succeeded: true, completedAt: 502.5)
         // t=500.5 and t=502.5 map to the same slot, two seconds apart. An
         // expired callback delivered later must preserve the recent count.
@@ -226,15 +233,15 @@ final class ObservatoryRendererTests: XCTestCase {
                        2 / snapshot.frameRateWindowSeconds, accuracy: 1e-9)
         // Both actual completions have expired even though their main-actor
         // delivery at t=503 would still be within the current rolling window.
-        clock = 504.5
+        clock.now = 504.5
         XCTAssertEqual(diagnostics.snapshot().completedFramesInWindow, 0)
         XCTAssertEqual(diagnostics.snapshot().completedFrames, 3)
     }
 
     func testInvalidCompletionTimesAffectLifetimeOnly() throws {
-        var clock: TimeInterval = 500
-        let diagnostics = RendererDiagnostics(clock: { clock })
-        clock = 503
+        let clock = RendererTestClock(now: 500)
+        let diagnostics = RendererDiagnostics(clock: { clock.now })
+        clock.now = 503
         let invalidTimes: [TimeInterval] = [.nan, .infinity, -.infinity, 499, 504]
         for completionTime in invalidTimes {
             diagnostics.recordCompletion(succeeded: true, completedAt: completionTime)

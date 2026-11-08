@@ -214,6 +214,20 @@ struct ExperimentView: View {
                     viewportStatus
                 }
             }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(model.inputStatusText)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(model.microphoneIsActive ? Color.orange : subdued)
+                Text(model.inputLevelText)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .modifier(InstrumentSurface(cornerRadius: 12))
+            .accessibilityElement(children: .combine)
             if let slice = model.latestSlice, !slice.isPhaseCoherent {
                 Label(slice.validity.displayName, systemImage: "waveform.slash")
                     .font(.caption.weight(.medium))
@@ -238,12 +252,6 @@ struct ExperimentView: View {
             Text(model.measuredAcquisitionText)
                 .font(.caption2.monospaced())
                 .foregroundStyle(.white.opacity(0.65))
-            Text(model.inputStatusText)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(model.microphoneIsActive ? Color.orange : subdued)
-            Text(model.inputLevelText)
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.white.opacity(0.75))
         }
         .padding(10)
         .modifier(InstrumentSurface(cornerRadius: 15))
