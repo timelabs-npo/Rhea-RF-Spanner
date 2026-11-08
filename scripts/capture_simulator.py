@@ -7,6 +7,7 @@ first idle launch is captured before DEMO or hosted tests can warm up the app.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 import math
 import platform
@@ -23,6 +24,9 @@ BUNDLE = "org.timelabs.RheaRFSpanner"
 READINESS_DEADLINE_SECONDS = 45.0
 READINESS_POLL_SECONDS = 0.5
 DIAGNOSTIC_OUTPUT_LIMIT = 8_192
+BOOT_TIMEOUT_SECONDS = 480
+SETUP_HELP_TIMEOUT_SECONDS = 10
+OWNED_CLEANUP_TIMEOUT_SECONDS = 10
 # A source tab/button alone is not evidence of the displayed acquisition mode.
 # Require the source caption and a view-specific caption for each DEMO image.
 SCENARIOS = [
@@ -43,7 +47,7 @@ def run(*args: str, timeout: float = 90, check: bool = True) -> str:
     return result.stdout
 
 
-def failure_details(error: Exception) -> dict:
+def failure_details(error: BaseException) -> dict:
     """Retain bounded timeout output; it may include a PID printed before a hang."""
     details = {"type": type(error).__name__, "message": str(error)[-DIAGNOSTIC_OUTPUT_LIMIT:]}
     if isinstance(error, subprocess.TimeoutExpired):
@@ -65,6 +69,107 @@ def write_manifest(manifest: dict) -> None:
     temporary = OUTPUT / "manifest.json.tmp"
     temporary.write_text(json.dumps(manifest, indent=2) + "\n")
     temporary.replace(OUTPUT / "manifest.json")
+
+
+def write_manifest_best_effort(manifest: dict, context: str) -> BaseException | None:
+    """Evidence I/O must not block cleanup or replace an existing failure."""
+    try:
+        write_manifest(manifest)
+    except BaseException as error:
+        details = {"context": context, **failure_details(error)}
+        manifest.setdefault("manifest_write_failures", []).append(details)
+        print(f"Manifest write failed ({context}): {details['message']}", flush=True)
+        return error
+    return None
+
+
+def recorded_command(manifest: dict, phase: str, *args: str, timeout: float = 90,
+                     check: bool = True, cleanup: bool = False,
+                     on_success: Callable[[str], None] | None = None) -> str:
+    """Record setup/cleanup before calling Simulator, including boot failures."""
+    command = {"phase": phase, "arguments": list(args), "timeout_seconds": timeout,
+               "check_return_code": check, "status": "running"}
+    manifest["cleanup_steps" if cleanup else "setup_steps"].append(command)
+    if not cleanup:
+        manifest["phase"] = phase
+    recording_failure = write_manifest_best_effort(manifest, phase + "_before") if cleanup else None
+    if not cleanup:
+        write_manifest(manifest)
+    started = time.monotonic()
+    command_failure: BaseException | None = None
+    try:
+        result = subprocess.run(args, text=True, capture_output=True, timeout=timeout)
+        command["return_code"] = result.returncode
+        command["output_tail_limit_characters"] = DIAGNOSTIC_OUTPUT_LIMIT
+        for stream in ("stdout", "stderr"):
+            output = getattr(result, stream)
+            command[stream + "_tail"] = output[-DIAGNOSTIC_OUTPUT_LIMIT:]
+            command[stream + "_truncated"] = len(output) > DIAGNOSTIC_OUTPUT_LIMIT
+        if check and result.returncode:
+            raise RuntimeError(f"{phase} returned exit code {result.returncode}; see its recorded command output.")
+        if result.returncode == 0 and on_success is not None:
+            # Register a returned resource before the completion-evidence write
+            # can throw. The callback may validate ownership; it cannot turn a
+            # failed command into ownership of a preexisting or guessed device.
+            on_success(result.stdout)
+        command["status"] = "complete" if result.returncode == 0 else "nonzero_ignored"
+        return result.stdout
+    except BaseException as error:
+        command_failure = error
+        command["status"] = "failed"
+        command["error_details"] = failure_details(error)
+        raise
+    finally:
+        command["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        if cleanup or command_failure is not None:
+            final_recording_failure = write_manifest_best_effort(manifest, phase + "_after")
+            recording_failure = recording_failure or final_recording_failure
+        else:
+            write_manifest(manifest)
+        # A recording failure is reported only after an owned cleanup command
+        # ran. It never replaces that command's own failure.
+        if command_failure is None and recording_failure is not None:
+            raise recording_failure
+
+
+def simulator_template(catalog: dict) -> dict:
+    """Keep the existing model preference, using actual device/runtime IDs."""
+    available_runtimes = {runtime["identifier"] for runtime in catalog["runtimes"]
+                          if runtime.get("isAvailable") and ".iOS-" in runtime["identifier"]}
+    device_types = {device_type["identifier"]: device_type for device_type in catalog["devicetypes"]}
+    candidates = [(runtime, device) for runtime, devices in catalog["devices"].items()
+                  if runtime in available_runtimes for device in devices
+                  if device.get("isAvailable") and device["name"].startswith("iPhone")]
+    if not candidates:
+        raise RuntimeError("No available iPhone Simulator runtime; native visual capture is blocked.")
+    runtime, device = next((candidate for candidate in candidates if candidate[1]["name"] == "iPhone 17 Pro"),
+                           candidates[0])
+    device_type_id = device.get("deviceTypeIdentifier")
+    if device_type_id is None:
+        # Older catalogs can omit this field. Resolve only an exact, unique
+        # listed model name; never construct an identifier from a display name.
+        matches = [identifier for identifier, value in device_types.items() if value["name"] == device["name"]]
+        if len(matches) != 1:
+            raise RuntimeError("Selected Simulator has no unambiguous listed device type identifier.")
+        device_type_id = matches[0]
+    if device_type_id not in device_types:
+        raise RuntimeError("Selected Simulator device type is absent from the installed catalog.")
+    return {"template_name": device["name"], "template_udid": device["udid"],
+            "model_name": device_types[device_type_id]["name"],
+            "device_type_identifier": device_type_id, "runtime_identifier": runtime}
+
+
+def verified_created_udid(output: str, preexisting_udids: set[str]) -> str:
+    """Accept only one returned canonical UUID that was not in the catalog."""
+    candidate = output.strip()
+    try:
+        parsed = uuid.UUID(candidate)
+    except (ValueError, AttributeError) as error:
+        raise RuntimeError("Simulator create did not return one canonical device UUID; ownership is unverified.") from error
+    if (not parsed.int or str(parsed).casefold() != candidate.casefold()
+            or candidate.casefold() in {value.casefold() for value in preexisting_udids}):
+        raise RuntimeError("Simulator create returned a noncanonical or preexisting UUID; ownership is unverified.")
+    return str(parsed).upper()
 
 
 def normalize_text(value: str) -> str:
@@ -174,18 +279,25 @@ def capture_when_visible(udid: str, helper: Path, name: str, args: list[str],
     # A repeated local capture must never accept an image from an older run.
     path.unlink(missing_ok=True)
     first_path.unlink(missing_ok=True)
+    first_launch = not manifest["screenshots"]
+    owned = manifest.get("owned_simulator", {})
+    skip_pretermination = (first_launch and name == "01-idle" and not args
+                           and owned.get("ownership_verified") is True and owned.get("udid") == udid)
     scenario = {
         "name": path.name, "launch_arguments": args, "required_visible_labels": required,
-        "first_launch_in_capture_run": not manifest["screenshots"],
-        "status": "preparing", "phase": "prelaunch_termination", "attempts": [],
+        "first_launch_in_capture_run": first_launch,
+        "prelaunch_termination": "skipped_fresh_owned_first_launch" if skip_pretermination else "required",
+        "status": "preparing", "phase": "first_launch_preparation" if skip_pretermination else "prelaunch_termination",
+        "attempts": [],
     }
     manifest["screenshots"].append(scenario)
     write_manifest(manifest)
     scenario_started = time.monotonic()
     started: float | None = None
     try:
-        run("xcrun", "simctl", "terminate", udid, BUNDLE, timeout=10, check=False)
-        scenario["prelaunch_termination_seconds"] = round(time.monotonic() - scenario_started, 3)
+        if not skip_pretermination:
+            run("xcrun", "simctl", "terminate", udid, BUNDLE, timeout=10, check=False)
+            scenario["prelaunch_termination_seconds"] = round(time.monotonic() - scenario_started, 3)
         scenario["status"] = "launching"
         scenario["phase"] = "launch"
         started = time.monotonic()
@@ -248,66 +360,12 @@ def capture_when_visible(udid: str, helper: Path, name: str, args: list[str],
         if scenario["attempts"] and scenario["attempts"][-1]["status"] in {"capturing", "recognizing"}:
             scenario["attempts"][-1]["status"] = "failed"
             scenario["attempts"][-1]["error"] = scenario["error"]
-        write_manifest(manifest)
+        write_manifest_best_effort(manifest, "capture_" + name + "_failure")
         raise RuntimeError(f"{name} failed during {scenario['phase']}. "
                            f"Inspect {OUTPUT / 'manifest.json'} and the retained screenshot(s).") from error
 
 
-def main() -> None:
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    devices = json.loads(run("xcrun", "simctl", "list", "devices", "available", "--json"))
-    candidates = [device for runtime, items in devices["devices"].items()
-                  if "iOS" in runtime for device in items
-                  if device.get("isAvailable") and device["name"].startswith("iPhone")]
-    if not candidates:
-        raise RuntimeError("No available iPhone Simulator runtime; native visual capture is blocked.")
-    preferred = next((d for d in candidates if d["name"] == "iPhone 17 Pro"), candidates[0])
-    udid = preferred["udid"]
-    print(f"Simulator: {preferred['name']} ({udid})", flush=True)
-    run("xcrun", "simctl", "boot", udid, check=False)
-    run("xcrun", "simctl", "bootstatus", udid, "-b", timeout=480)
-    run("xcrun", "simctl", "ui", udid, "appearance", "dark")
-    run("xcrun", "simctl", "status_bar", udid, "override", "--time", "9:41",
-        "--dataNetwork", "wifi", "--wifiMode", "active", "--wifiBars", "3",
-        "--batteryState", "charged", "--batteryLevel", "100")
-    app = ROOT / "build/DerivedData-simulator/Build/Products/Debug-iphonesimulator/RheaRFSpanner.app"
-    if not app.is_dir():
-        raise RuntimeError(f"Simulator build missing: {app}")
-    run("xcrun", "simctl", "install", udid, str(app))
-    manifest = {
-        "bundle": BUNDLE, "simulator": preferred["name"], "screenshots": [],
-        "capture_status": "preparing", "readiness_deadline_seconds": READINESS_DEADLINE_SECONDS,
-        "readiness_meaning": "Visible app content only; not a measurement or hardware validation.",
-        "launch_order": "Idle first, then DEMO scenarios, then hosted tests. No app warmup.",
-    }
-    write_manifest(manifest)
-    capture_failed = False
-    try:
-        helper = compile_text_reader()
-        manifest["capture_status"] = "capturing"
-        write_manifest(manifest)
-        for name, args, required in SCENARIOS:
-            capture_when_visible(udid, helper, name, args, required, manifest)
-        manifest["capture_status"] = "complete"
-        write_manifest(manifest)
-    except Exception as error:
-        capture_failed = True
-        manifest["capture_status"] = "failed"
-        manifest["error_details"] = failure_details(error)
-        manifest["error"] = manifest["error_details"]["message"]
-        write_manifest(manifest)
-        raise
-    finally:
-        try:
-            run("xcrun", "simctl", "terminate", udid, BUNDLE, timeout=10, check=False)
-        except Exception as error:
-            manifest["cleanup_error"] = failure_details(error)
-            write_manifest(manifest)
-            print("Cleanup failed: " + manifest["cleanup_error"]["message"], flush=True)
-            # A second timeout must not replace the original launch/readiness
-            # exception. If capture succeeded, cleanup failure still fails CI.
-            if not capture_failed:
-                raise
+def run_hosted_tests(udid: str, manifest: dict) -> None:
     test_output = ROOT / "build/test-results"
     test_output.mkdir(parents=True, exist_ok=True)
     architecture = platform.machine()
@@ -316,6 +374,8 @@ def main() -> None:
     # xcodebuild refuses an existing result bundle. Preserve earlier evidence
     # while allowing repeated captures in the same checkout.
     result_bundle = test_output / f"ObservatorySession-{uuid.uuid4().hex}.xcresult"
+    manifest["hosted_test_result_bundle"] = str(result_bundle.relative_to(ROOT))
+    write_manifest(manifest)
     command = [
         "xcodebuild", "-project", "RheaRFSpanner.xcodeproj", "-scheme", "RheaRFSpanner",
         "-configuration", "Debug", "-destination", f"platform=iOS Simulator,id={udid},arch={architecture}",
@@ -330,6 +390,136 @@ def main() -> None:
     if result.returncode:
         raise RuntimeError("Session tests failed. See xcode-session-tests.log.\n" + (result.stdout + result.stderr)[-5_000:])
     print("Simulator-hosted session integration tests passed", flush=True)
+
+
+def main() -> None:
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    (ROOT / "build/logs").mkdir(parents=True, exist_ok=True)
+    capture_id = uuid.uuid4().hex
+    manifest = {
+        "capture_id": capture_id, "bundle": BUNDLE, "screenshots": [],
+        "run_status": "preparing", "phase": "initialization", "capture_status": "preparing",
+        "readiness_deadline_seconds": READINESS_DEADLINE_SECONDS,
+        "boot_timeout_seconds": BOOT_TIMEOUT_SECONDS, "setup_steps": [], "cleanup_steps": [],
+        "readiness_meaning": "Visible app content only; not a measurement or hardware validation.",
+        "launch_order": "Idle first on a fresh owned Simulator, then DEMO scenarios, then hosted tests. No app warmup or retry.",
+    }
+    # Write evidence before any git/simctl/setup command can fail or hang.
+    write_manifest(manifest)
+    owned_udid: str | None = None
+    primary_failure: BaseException | None = None
+    try:
+        manifest["source_commit"] = recorded_command(
+            manifest, "identify_source", "git", "-C", str(ROOT), "rev-parse", "HEAD", timeout=10
+        ).strip()
+        for command in ("create", "shutdown", "delete"):
+            # Retain this installed Xcode's actual CLI reference before using
+            # the lifecycle commands. Help is bounded and never launches Rhea.
+            recorded_command(manifest, "help_" + command, "xcrun", "simctl", "help", command,
+                             timeout=SETUP_HELP_TIMEOUT_SECONDS)
+        catalog = json.loads(recorded_command(
+            manifest, "list_simulators", "xcrun", "simctl", "list", "--json", timeout=30
+        ))
+        template = simulator_template(catalog)
+        manifest["simulator"] = template["model_name"]
+        manifest["simulator_template"] = template
+        preexisting_udids = {device["udid"] for devices in catalog["devices"].values() for device in devices}
+        owned_name = "Rhea-Capture-" + capture_id
+        manifest["requested_simulator_name"] = owned_name
+
+        def register_created_simulator(output: str) -> None:
+            nonlocal owned_udid
+            # Authority comes only from a successful create and a new canonical
+            # returned UUID. Register it before any completion evidence I/O.
+            manifest["phase"] = "verify_created_ownership"
+            owned_udid = verified_created_udid(output, preexisting_udids)
+            manifest["owned_simulator"] = {"name": owned_name, "udid": owned_udid,
+                                           "ownership_verified": True,
+                                           "device_type_identifier": template["device_type_identifier"],
+                                           "runtime_identifier": template["runtime_identifier"]}
+            manifest["phase"] = "create_simulator"
+
+        recorded_command(
+            manifest, "create_simulator", "xcrun", "simctl", "create", owned_name,
+            template["device_type_identifier"], template["runtime_identifier"], timeout=60,
+            on_success=register_created_simulator
+        )
+        if owned_udid is None:
+            raise RuntimeError("Simulator create did not establish verified ownership.")
+        print(f"Fresh Simulator: {template['model_name']} ({owned_udid})", flush=True)
+        recorded_command(manifest, "boot_simulator", "xcrun", "simctl", "boot", owned_udid)
+        recorded_command(manifest, "wait_for_boot", "xcrun", "simctl", "bootstatus", owned_udid, "-b",
+                         timeout=BOOT_TIMEOUT_SECONDS)
+        recorded_command(manifest, "set_appearance", "xcrun", "simctl", "ui", owned_udid, "appearance", "dark")
+        recorded_command(manifest, "set_status_bar", "xcrun", "simctl", "status_bar", owned_udid,
+                         "override", "--time", "9:41", "--dataNetwork", "wifi", "--wifiMode", "active",
+                         "--wifiBars", "3", "--batteryState", "charged", "--batteryLevel", "100")
+        manifest["phase"] = "locate_app"
+        write_manifest(manifest)
+        app = ROOT / "build/DerivedData-simulator/Build/Products/Debug-iphonesimulator/RheaRFSpanner.app"
+        if not app.is_dir():
+            raise RuntimeError(f"Simulator build missing: {app}")
+        recorded_command(manifest, "install_app", "xcrun", "simctl", "install", owned_udid, str(app))
+        manifest["phase"] = "compile_text_reader"
+        write_manifest(manifest)
+        helper = compile_text_reader()
+        manifest["capture_status"] = "capturing"
+        manifest["run_status"] = "capturing"
+        for name, args, required in SCENARIOS:
+            manifest["phase"] = "capture_" + name
+            write_manifest(manifest)
+            capture_when_visible(owned_udid, helper, name, args, required, manifest)
+        manifest["capture_status"] = "complete"
+        write_manifest(manifest)
+        recorded_command(manifest, "pretest_termination", "xcrun", "simctl", "terminate", owned_udid,
+                         BUNDLE, timeout=10, check=False)
+        manifest["phase"] = "hosted_tests"
+        manifest["hosted_tests_status"] = "running"
+        write_manifest(manifest)
+        run_hosted_tests(owned_udid, manifest)
+        manifest["hosted_tests_status"] = "passed"
+        manifest["run_status"] = "complete"
+        manifest["phase"] = "complete"
+        write_manifest(manifest)
+    except BaseException as error:
+        primary_failure = error
+        manifest["run_status"] = "failed"
+        if manifest["capture_status"] != "complete":
+            manifest["capture_status"] = "failed"
+        if manifest.get("hosted_tests_status") == "running":
+            manifest["hosted_tests_status"] = "failed"
+        manifest["error_details"] = failure_details(error)
+        manifest["error"] = manifest["error_details"]["message"]
+        write_manifest_best_effort(manifest, "primary_failure")
+        raise
+    finally:
+        # This lifetime includes hosted tests, not just screenshots. Never
+        # target a preprovisioned device, the 'all' alias, or an unverified ID.
+        cleanup_failure: BaseException | None = None
+        if owned_udid is not None:
+            for command in ("shutdown", "delete"):
+                try:
+                    recorded_command(manifest, "cleanup_" + command, "xcrun", "simctl", command,
+                                     owned_udid, timeout=OWNED_CLEANUP_TIMEOUT_SECONDS, cleanup=True)
+                except BaseException as error:
+                    if cleanup_failure is None:
+                        cleanup_failure = error
+                    print("Cleanup failed: " + failure_details(error)["message"], flush=True)
+        manifest["cleanup_status"] = ("failed" if cleanup_failure is not None
+                                       else "complete" if owned_udid is not None else "no_owned_device")
+        if cleanup_failure is not None:
+            manifest["run_status"] = "failed"
+            if primary_failure is None:
+                manifest["phase"] = "cleanup"
+                manifest["error_details"] = failure_details(cleanup_failure)
+                manifest["error"] = manifest["error_details"]["message"]
+        final_recording_failure = write_manifest_best_effort(manifest, "cleanup_summary")
+        # Cleanup evidence is additional; it cannot replace a boot, launch,
+        # recognition, or test failure. A cleanup-only failure still fails CI.
+        if cleanup_failure is not None and primary_failure is None:
+            raise cleanup_failure
+        if final_recording_failure is not None and primary_failure is None:
+            raise final_recording_failure
 
 
 if __name__ == "__main__":
