@@ -26,8 +26,10 @@ False color does not imply thermal sensing.
 
 **Current source candidate: 0.2.2 (4), useful passive audio.** LIVE opens in
 Listen, with measured levels and spectrum independently of the active tone
-experiment. The implementation and focused digital fixtures are ready for
-native review; exact-candidate Mac CI and TestFlight delivery are pending.
+experiment. Source `f8d1eed0` passed native builds and 68 core / 33 hosted tests.
+A subsequent timing-flags correction and capture-readiness investigation are
+pending; that earlier pass does not validate the amended source. TestFlight
+delivery of this candidate has not been dispatched.
 See [the passive-audio behavior](docs/PASSIVE_AUDIO.md) and
 [its evidence record](docs/PASSIVE_AUDIO_VALIDATION.md).
 
@@ -40,8 +42,8 @@ Copy Diagnostic Dump action, an analytical self-test, and full-band Waterfall.
 | Version / scope | Observed evidence |
 | --- | --- |
 | 0.2.0 (2), previous release | Apple processing VALID, internal testing enabled, owner-confirmed installation and initial test; useful physical operation remains unverified |
-| 0.2.1 (3), diagnostic foundation | Source `722ee840` passed 63 core + 16 hosted tests, both iOS builds and four native captures in [run 42436184984](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42436184984). Subsequent watchdog/copy corrections at `d4903b84` are undergoing [exact-source validation](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438050312); delivery pending |
-| 0.2.2 (4), this passive-audio candidate | Separate WD Codex implementation and review, integration corrections and new digital/hosted fixtures; native execution and delivery pending |
+| 0.2.1 (3), diagnostic foundation | Final source `d4903b84` passed 63 core + 21 hosted tests and native builds in [run 42438050312](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438050312); PR #3 merged at `3f7716`. [Upload run 42438984196](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438984196) succeeded; Apple processing is VALID. Tester-group access was not granted and needs explicit approval |
+| 0.2.2 (4), this passive-audio candidate | PR #4 source `f8d1eed0` passed 68 core + 33 hosted tests in [run 42438775739](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438775739). Four PNGs were generated, but the inspected idle capture was blank except for the status bar; capture readiness versus startup failure remains under investigation. Amended-source CI and delivery are pending |
 
 The [G0 evidence record](docs/DIAGNOSTIC_RELEASE_VALIDATION.md) preserves exact
 sources, test counts, review findings and artifact identities. WD sessions have
@@ -232,6 +234,10 @@ processing is confirmed, the internal group contains the **Ready to Test** build
 and the owner reports successful installation. This confirms delivery, not
 physical measurement accuracy or a resolution of the reported LIVE problem.
 See the [upload validation record](docs/TESTFLIGHT_UPLOAD_VALIDATION.md).
+The newer **0.2.1 (3)** diagnostic build has also uploaded and processed as
+VALID; it has not been assigned to the internal tester group. Automatic approval
+review rejected that access grant because the upload authorization did not
+explicitly cover the recipient scope. See the [G0 evidence record](docs/DIAGNOSTIC_RELEASE_VALIDATION.md).
 
 See [AppleSubmission.md](docs/AppleSubmission.md),
 [AppReviewLetter.md](docs/AppReviewLetter.md), and

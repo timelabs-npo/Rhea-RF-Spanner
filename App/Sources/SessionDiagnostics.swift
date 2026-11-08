@@ -277,7 +277,8 @@ final class SessionDiagnosticCounters: Sendable {
     /// Called only on the serial DSP consumer after it has produced a frame.
     func recordProcessedFrame(
         _ frame: PhaseTelemetryFrame,
-        statistics: SignalBlockStatistics?, spectrum: SpectrumFrame?
+        statistics: SignalBlockStatistics?, spectrum: SpectrumFrame?,
+        timing: AudioAnalysisTiming
     ) {
         var peakLevel: Double?
         var peakFrequency: Double?
@@ -300,7 +301,9 @@ final class SessionDiagnosticCounters: Sendable {
                 relativePhaseRadians: finiteDiagnosticValue(frame.relativePhaseRadians),
                 spectrumBinCount: spectrum?.magnitudesDBFS.count ?? 0,
                 spectrumPeakHz: peakFrequency, spectrumPeakDBFS: peakLevel,
-                acquisitionKind: "tone"
+                acquisitionKind: "tone",
+                timestampsAreValid: timing.timestampsAreValid,
+                samplesAreContiguous: timing.samplesAreContiguous
             )
         )
         latestDSP.withLock { $0 = aggregate }
@@ -318,7 +321,12 @@ final class SessionDiagnosticCounters: Sendable {
     /// carrier estimate; timing/nonfinite evidence remains independently useful.
     func recordProcessedAnalysisFrame(_ frame: AudioAnalysisFrame) {
         if let tone = frame.tone {
-            recordProcessedFrame(tone, statistics: frame.inputStatistics, spectrum: frame.spectrum)
+            // A tone validity result alone cannot distinguish unavailable
+            // timestamps from a discontinuity inside the consumed window.
+            recordProcessedFrame(
+                tone, statistics: frame.inputStatistics, spectrum: frame.spectrum,
+                timing: frame.timing
+            )
             return
         }
         var peakLevel: Double?

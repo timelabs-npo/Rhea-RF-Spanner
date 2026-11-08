@@ -441,4 +441,58 @@ final class DiagnosticsIntegrationTests: XCTestCase {
         XCTAssertEqual(model.diagnosticSnapshot.pipeline.processedFrames, 1)
         XCTAssertEqual(try XCTUnwrap(model.diagnosticSnapshot.pipeline.latestInput?.rms), 0.25, accuracy: 1e-9)
     }
+
+    func testToneWindowTimingReachesDiagnosticSnapshotAndJSONForUnavailableClockAndInternalGap() throws {
+        // Digital fixtures exercise the common Tone/DEMO analysis branch and
+        // its diagnostic export. No physical clock or microphone is accessed.
+        let ring = SPSCFloatRingBuffer()
+        let engine = PhaseSensingEngine(ringBuffer: ring, acquisitionKind: .tone)
+        let counters = SessionDiagnosticCounters()
+
+        func write(count: Int, at sample: UInt64, timestampIsValid: Bool = true) {
+            let samples = [Float](repeating: 0.25, count: count)
+            samples.withUnsafeBufferPointer {
+                XCTAssertTrue(ring.write(
+                    from: $0.baseAddress!, count: count, startSampleTime: sample,
+                    timestampIsValid: timestampIsValid
+                ))
+            }
+        }
+
+        func inspectNextFrame(timestampsAreValid: Bool, samplesAreContiguous: Bool) throws {
+            let frame = try XCTUnwrap(engine.processNextAnalysisFrame())
+            XCTAssertEqual(frame.acquisitionKind, .tone)
+            XCTAssertEqual(try XCTUnwrap(frame.tone).validity, .inputDiscontinuity)
+            XCTAssertEqual(frame.timing.timestampsAreValid, timestampsAreValid)
+            XCTAssertEqual(frame.timing.samplesAreContiguous, samplesAreContiguous)
+            XCTAssertNil(frame.spectrum)
+            counters.recordProcessedAnalysisFrame(frame)
+            let snapshot = counters.snapshot(ring: ring, renderedSamples: 0)
+            let dsp = try XCTUnwrap(snapshot.latestDSP)
+            XCTAssertEqual(dsp.acquisitionKind, "tone")
+            XCTAssertEqual(dsp.toneAnalysis, "requested")
+            XCTAssertEqual(dsp.timestampsAreValid, timestampsAreValid)
+            XCTAssertEqual(dsp.samplesAreContiguous, samplesAreContiguous)
+            let encoded = try JSONEncoder().encode(snapshot)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+            let output = try XCTUnwrap(json["latestDSP"] as? [String: Any])
+            XCTAssertEqual(output["timestampsAreValid"] as? Bool, timestampsAreValid)
+            XCTAssertEqual(output["samplesAreContiguous"] as? Bool, samplesAreContiguous)
+        }
+
+        // Contiguous sample indices are not proof that their timestamps exist.
+        write(count: 2_048, at: 0, timestampIsValid: false)
+        try inspectNextFrame(timestampsAreValid: false, samplesAreContiguous: true)
+
+        // Both callbacks have valid timestamps, but samples 3072...4095 are
+        // missing inside this analysis window. The two flags must stay distinct.
+        write(count: 1_024, at: 2_048)
+        write(count: 1_024, at: 4_096)
+        try inspectNextFrame(timestampsAreValid: true, samplesAreContiguous: false)
+        let finalSnapshot = counters.snapshot(ring: ring, renderedSamples: 0)
+        XCTAssertEqual(finalSnapshot.processedFrames, 2)
+        XCTAssertEqual(finalSnapshot.discontinuousFrames, 2)
+        XCTAssertEqual(finalSnapshot.spectrumFrames, 0)
+        XCTAssertEqual(try XCTUnwrap(finalSnapshot.latestInput?.rms), 0.25, accuracy: 1e-9)
+    }
 }
