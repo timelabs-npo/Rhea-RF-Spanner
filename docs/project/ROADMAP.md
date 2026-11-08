@@ -33,9 +33,12 @@ frequency band, measured quantity, and limitations that apply to it.
 | Existing software | Isolated Swift signal core, active acoustic LIVE, silent deterministic DEMO, Waterfall, and bounded in-memory REPLAY; see [architecture](../ARCHITECTURE.md) |
 
 The diagnostic build **0.2.1 (3)** has since passed native validation, uploaded
-and processed as VALID; tester-group access has not been granted. G1 targets
-**0.2.2 (4)** and its latest amendments require their own validation. Current
-source/run/access details are in [the checkpoint](NEXT_SESSION.md) and the
+and processed as VALID; tester-group access has not been granted. G1
+**0.2.2 (4)** has since passed exact-source native validation, merged, uploaded
+and processed as VALID. Tester access remains blocked pending explicit
+authorization; physical acceptance remains unobserved. Current source/run/access
+details are in [the checkpoint](NEXT_SESSION.md), the
+[G1 evidence record](../PASSIVE_AUDIO_VALIDATION.md) and the
 [G0 evidence record](../DIAGNOSTIC_RELEASE_VALIDATION.md). Successful compilation,
 Apple processing, tester access and useful hardware operation are separate
 observations.
@@ -121,8 +124,16 @@ active acoustic estimator.
 
 The [bounded G2 implementation gate](G2_SPATIAL_CONTEXT_GATE.md) separates an
 optional context preview (**G2a**) from verified audio/pose time association
-(**G2b**). It is a future design; the separate G2a work session is unintegrated
-and no spatial feature is delivered by the current candidate.
+(**G2b**). A separate unwired G2a module exists in
+[PR #5](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/5); no spatial
+feature is delivered by G1 0.2.2 (4). Draft source
+`3b04192a74833653b6730d0d116abf614552f02b` passed native builds, 85 core tests,
+63 hosted tests, 22 separate Python tests and four inspected captures in
+[run 42445877459](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42445877459).
+See the [native module evidence](../SPATIAL_MODULE_NATIVE_VALIDATION.md);
+physical sensor operation and app integration remain open.
+The next integration task connects the existing controller to optional LIVE
+Listen context, then requires a physical context-off/context-on comparison.
 
 Begin with camera context and AR camera pose. Add LiDAR only after a runtime
 capability check; Apple documents that `sceneDepth` is optional and must be
