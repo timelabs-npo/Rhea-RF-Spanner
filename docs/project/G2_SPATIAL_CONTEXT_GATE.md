@@ -2,11 +2,16 @@
 
 **Integration design — 2026-11-08.** Originally prepared against the Rhea RF
 Spanner roadmap and the G1 worktree. The separate G2a module is now an unwired
-draft; its actual source and execution evidence are in
-[SPATIAL_CONTEXT_VALIDATION.md](../SPATIAL_CONTEXT_VALIDATION.md).
-G1 0.2.2 (4) has passed its software and Apple processing gates; physical
-acceptance remains open. This design does not establish G2 app integration,
-delivery, simultaneous sensor operation or capture-time association.
+draft; its source and execution history are in the
+[draft validation record](https://github.com/timelabs-npo/Rhea-RF-Spanner/blob/3b04192a74833653b6730d0d116abf614552f02b/docs/SPATIAL_CONTEXT_VALIDATION.md).
+That exact draft passed native builds, 85 core tests, 63 hosted tests, 22
+separate Python tests and four inspected captures in
+[run 42445877459](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42445877459).
+The [completed native evidence](../SPATIAL_MODULE_NATIVE_VALIDATION.md) is
+separate from the still-open integration and physical sensor gates.
+G1 0.2.2 (4) has passed its software and Apple processing gates; tester access
+and physical acceptance remain open. This design does not establish G2 app
+integration, delivery, simultaneous sensor operation or capture-time association.
 
 ## Decision: context first, verified association next
 
@@ -299,7 +304,11 @@ coordinate epoch, **Depth unavailable** or the qualified scalar depth, and
 session coordinate system. No millimeter-precision badge, RF heatmap, or
 sound-source marker belongs to this gate.
 
-## First bounded Codex task: context module and fixtures
+## Original bounded Codex task: context module and fixtures
+
+The original task specification below records the module's scope and ownership.
+Its authored implementation is now in the separate draft; execution evidence
+belongs in the validation record, not in this specification.
 
 **Task objective:** create a reviewable G2a context module and native preview
 wrapper against the coordinator's frozen G1 source, with camera auto-start
@@ -353,6 +362,46 @@ the implementation session.
 7. Portable tests pass on an available Swift host. The coordinator then runs
    exact-source native compilation and hosted tests after project integration.
    A missing toolchain is reported as blocked, never as a pass.
+
+## Next bounded task: integrate optional Listen context
+
+Use the existing `SpatialContextController` and `SpatialContextView`. The
+current parent model/view do not own or mount them, and the application has no
+camera purpose string. The useful increment is a camera view and independently
+labelled pose/depth status beside measured audio levels and Waterfall.
+
+| Integration owner / file | Scoped change |
+| --- | --- |
+| `App/Sources/ExperimentModel.swift` | Own one controller; context/depth default off. Only explicit LIVE Listen Start prepares both permissions before either sensor starts. A permission resolution returns idle. After audio starts, consume the one-shot camera permit; any failed combined start rolls back both. Forward foreground state and route every stop, deadline, mode change, audio failure and camera stop callback through idempotent combined teardown. Retain the camera reason separately. |
+| `App/Sources/ExperimentView.swift` | Add idle-only context/depth choices and mount the existing context panel without hiding the Start/Stop dock. Denied/unsupported camera offers an explicit context-off choice followed by a new Start; never silently start only half of the requested run. Tone/DEMO/Replay keep context off. |
+| `App/Sources/AudioTransceiver.swift` and its `ExperimentAudioSession` boundary | Add a narrow read-only running-contract check after AR startup and during existing monitoring. Validate current category/mode, built-in input and actual input format; stop with evidence on mismatch. Preserve the audio graph, sole capture producer and DSP consumer. |
+| `App/Sources/SessionDiagnostics.swift`, `DiagnosticsView.swift` and the model snapshot | Add an explicit allowlist of spatial capability/state, counts, relative intervals and stop/error reasons. Do not encode the spatial snapshot wholesale or export matrices, images, maps or absolute clocks. |
+| `App/Resources/Info.plist`, in-app help and privacy/review documents | Add accurate camera purpose text before requesting permission; describe optional on-device context and the unsupported-depth path. Review project membership for the exact integrated source. |
+
+The audio seam is specific: `diagnosticSnapshot()` refreshes active
+AVAudioSession category/mode/route/rate, but engine input-format fields come
+from startup `checkedFormats()`. Existing `monitorAcquisition()` does not
+enforce a post-AR audio contract. Reading retained fields alone cannot prove
+that starting camera context preserved the input configuration.
+
+Acceptance for this task requires:
+
+1. Parent-coordinator fixtures with injected audio and spatial sessions prove
+   permission-only idle behavior, cancellation, startup rollback, failure in
+   either subsystem stopping both, background/deadline/mode teardown and old-run
+   callback rejection. Existing controller-only fixtures are not this evidence.
+2. Native builds and hosted tests pass for the exact integrated source, with
+   visible Start/Stop and unchanged context-off Listen, Tone, DEMO and Replay.
+   A prior pass for the unwired module does not validate the new integration.
+3. After authorized tester access, retain paired context-off/context-on physical
+   runs on the same phone: observed route/category/mode/format, advancing
+   microphone/DSP/AR counters, ordinary sound response and stop behavior. Start
+   with depth off; exercise optional depth only on supported hardware. Record
+   unexercised cases and actual camera release as described below.
+
+Keep **“Audio/pose timing not associated”** visible. Tracking epochs and depth
+confidence retain their existing meanings. No clock bridge, spatial audio
+placement, RF input or shared-session implementation belongs to this task.
 
 ## Device evidence needed before closing G2a or G2b
 

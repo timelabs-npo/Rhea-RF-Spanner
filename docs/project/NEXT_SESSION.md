@@ -44,10 +44,14 @@ authorization did not explicitly cover the recipient access scope.
 **Do not retry group assignment without explicit authorization for that grant.**
 
 Physical G1 remains unobserved. A successful idle/DEMO capture does not settle
-the original device report. G2 is a separate unwired draft in PR #5. Its latest
+the original device report. G2 is a separate unwired draft in PR #5. Its earlier
 run passed core/build checks but timed out while booting Simulator before app
-launch; its hosted tests did not execute. Keep its isolated Simulator-control
-correction and native validation outside the G1 release.
+launch. A reviewed fresh-owned Simulator correction is now in source
+`3b04192a74833653b6730d0d116abf614552f02b`; exact-source native run
+`42445877459` passed 85 core tests, 63 hosted tests, 22 separate Python
+fixtures, native builds, four inspected captures and owned-Simulator cleanup.
+See [the completed G2 software record](../SPATIAL_MODULE_NATIVE_VALIDATION.md).
+The module remains unwired and outside the G1 release.
 
 1. Confirm the current remote head and isolated working tree. Read any project
    instructions, the latest checkpoint, and changed files before editing.
@@ -55,15 +59,17 @@ correction and native validation outside the G1 release.
    payload hashes, and Apple VALID / COMPLETE records for
    `4f5ba9b4-32e9-4189-9658-62cec90fb8ff`. Do not repeat the completed upload or
    confuse Apple processing with authorization to grant tester access.
-3. Preserve the final G1 native source and its merge equivalence. Publish the
-   scoped documentation update through the coordinator without changing the
-   validated application source or claiming new hardware evidence.
+3. Preserve the final G1 native source and its merge equivalence. Release
+   documentation was published at `c830a70c`; subsequent status-only updates
+   do not change the uploaded binary or establish hardware acceptance.
 4. Keep tester assignment blocked until explicitly authorized. After authorized
    access and installation, obtain the smallest physical Listen diagnostic run
    described in [PASSIVE_AUDIO.md](../PASSIVE_AUDIO.md).
-5. Review G2's isolated Simulator-control correction, then validate that draft's
-   exact source. Preserve its original 480-second boot timeout and unexecuted
-   hosted stage; do not attribute a G1 pass to G2.
+5. Preserve the completed G2 run `42445877459` and its exact-source evidence.
+   The next product task is the bounded optional Listen/context
+   integration in [the G2 gate](G2_SPATIAL_CONTEXT_GATE.md#next-bounded-task-integrate-optional-listen-context).
+   It needs parent-coordinator fixtures and its own exact-source validation;
+   an unwired-module pass cannot validate that later change.
 6. Leave a checkpoint with the next diagnostic question. If a physical-device
    observation is required, retain that blocker and progress a separate planned
    design/fixture task instead of manufacturing a hardware result.
@@ -88,13 +94,13 @@ a later stage is still pending. Do not fill a field from expectation.
 
 | Field | Latest checkpoint |
 | --- | --- |
-| Observed at | `2026-11-08T06:53:07+03:00` (Europe/Moscow); evidence times below identify the individual observations |
-| Coordinator / session | ChatGPT coordinator; G0/G1 WD implementation/review sessions completed; G2 reviewed draft has separate Simulator-control work underway |
+| Observed at | `2026-11-08T07:30:02+03:00` (Europe/Moscow); evidence times below identify the individual observations |
+| Coordinator / session | ChatGPT coordinator; five bounded G0/G1/G2 WD implementation/review sessions completed; independent review, exact-source G2 native validation and artifact inspection completed |
 | Active objective / gate | G1 uploaded and Apple-processed; tester access and physical fault confirmation remain open |
 | Remote base at session start | `4be8724f244cd2e478f5d6877f798986fcaa2ae9`; refresh before editing |
 | Working branch / exact commit | G1 tested public source `222caea29b040063658cad2288b2e02726d02c73`; PR #4 merged main `dff7c9f7fa99e1df07d8844f7546427119eb1a9e`. All 133 tracked blob hashes and modes match. Local mirror history differs from public history and must not be pushed |
-| Working directory / owner | G1 documentation worktree; coordinator owns main publication and distribution. G2 code and Simulator-control work remain isolated |
-| Changed paths / uncommitted work | Documentation only: README, passive contract/evidence, checkpoint, ReviewTestPlan introduction and AppReviewLetter introductory status; inspect the worktree before resuming |
+| Working directory / owner | Coordinator owns publication. Actual-Git WD checkout `C:\Users\wheel\RheaWork\Rhea-RF-Spanner-merge-audit-2afb-3dba2714` is clean at detached `3b04192a`, with no pending merge; older dirty WD worktrees were preserved. It is a verified starting point for a new isolated integration branch |
+| Changed paths / uncommitted work | Main status update is documentation only: roadmap, G2 integration gate, this checkpoint and SPATIAL_MODULE_NATIVE_VALIDATION.md. G1 binary/source remains fixed. Inspect the actual worktree and current remote refs before resuming |
 | Confirmed defect and reproduction | G0 stage observability defects repaired. Simulator inspection reproduced an off-screen Start action, corrected by the bottom dock; wrapped-label capture rejection corrected and natively verified. No physical-device root cause established |
 | Hypotheses still open | Original physical-device failure mechanism; original d371 attempt-1 launch/cleanup timeout cause. Later successful UI capture does not establish either cause |
 | Implemented changes | Input-only Listen, independent levels/spectrum, captured-duration cap, no fabricated phase/Replay, retained stop evidence/current output gate, timing flags in diagnostics, visible Start/Stop dock and strict capture readiness |
@@ -107,10 +113,12 @@ a later stage is still pending. Do not fill a field from expectation.
 | Apple validation / upload / processing | G1 [run 42443912311](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443912311) dispatched **once**, succeeded; validation job 128618729126 and signing/upload job 128618751852 passed. Direct ASC observation at `2026-11-08T03:51:37Z`: build/upload `4f5ba9b4-32e9-4189-9658-62cec90fb8ff`, build 4, pre-release version `3fade264-4944-4c1d-acf1-c56b85e0a865` = 0.2.2 IOS, build VALID / upload COMPLETE, errors/warnings/infos empty. Earlier PROCESSING observation is retained in the evidence record. G0 previously observed VALID/COMPLETE in ASC build `fbe064d5-c57a-4853-9d40-c0a64b1d3705` at `2026-11-08T02:39:50Z` |
 | TestFlight group / tester state | New-build access assignment remains blocked. Automatic approval review rejected granting Rhea RF Spanner Internal access because recipient scope was absent from upload authorization. Do not retry without explicit approval for that access |
 | Physical-device observations | Installation/testing of build 2 reported; no build 3/4 device diagnostic report and no verified physical root cause |
-| Running jobs / session IDs / last checked | G1 TestFlight run 42443912311 completed successfully and Apple processing is confirmed VALID / COMPLETE. G2a WD thread `01a1b901-b210-78c3-afdb-901b6e80e9f5` completed at 05:48:23 Europe/Moscow, exit 0; its reviewed output is now separate PR #5. Runtime owner is preparing an isolated G2 fresh-Simulator control correction |
+| Running jobs / session IDs / last checked | G1 TestFlight run 42443912311 completed and Apple processing is VALID / COMPLETE. Five bounded WD Codex sessions have completed; no WD implementation session remains running. G2 native run 42445877459, job 128624574730, completed successfully at exact `3b04192a`; logs and artifact inspected. No further native run is required for this documentation-only update |
 | G1 candidate | True Listen/Tone separation; final native and visual gates passed at `222caea2`, merged to main; uploaded and Apple-processed; tester access blocked and physical behavior unobserved |
-| G2 status | Separate draft [PR #5](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/5), head `14adceda`: [run 42443083460](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42443083460) passed **85 core tests**, native builds and **10 Python tests**, then Simulator boot timed out after 480 seconds before app launch. Hosted tests did not run. Control correction/native rerun pending; no delivered camera/AR/LiDAR capability |
-| Blocker / smallest next action | Preserve blocked tester access and do not duplicate the completed upload. After explicit access authorization and installation, obtain a phone diagnostic report. Continue G2 validation independently |
+| G2 status | Separate unwired draft [PR #5](https://github.com/timelabs-npo/Rhea-RF-Spanner/pull/5), source `3b04192a74833653b6730d0d116abf614552f02b`. Native [run 42445877459](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42445877459) passed **85 core + 63 hosted tests**, 0 failures, **22 separate Python fixtures**, Core/Simulator/device builds, four inspected captures and owned shutdown/delete. Individual log case counts confirm 85/63 passes without skipped-case lines or expected-failure mentions. Earlier boot failures remain historical; no integrated or delivered camera/AR/LiDAR capability is claimed |
+| G2 retained artifact | `13603354015`, name `rhea-rf-spanner-build-2d4e7030b2d7d2d9b1ee4df7de64ba34bccb17d6-attempt-1`, SHA-256 `b68352ac99bc1487a27d0bd379aec93dc64e36f6f7dbe704b3375e33b0a5e777`; 3,142,991 bytes, 174 extracted files, expiry 2026-11-15. Download/hash verified at `C:\Users\wheel\RheaWork\ci-42445877459`. [Full native module evidence](../SPATIAL_MODULE_NATIVE_VALIDATION.md) records suite/capture/lifecycle results |
+| G2 history resolution | Actual merge base was `d371a6df`. A normal isolated Git merge found conflicts only in the capture script and its tests. Resolved tree `9a9c9533d90e23d71c92bd0d204f219fdd7ce92d` equals reviewed `2afb5640` exactly. Published `3b04192a` records parents `2afb5640` and main `c830a70c`; mergeability was verified against that main commit. All 143 reviewed blobs/modes are preserved. Refresh later main documentation before the next integration task |
+| Blocker / smallest next action | Preserve blocked tester access and do not duplicate the completed upload. After explicit access authorization and installation, obtain a physical Listen report. The G2 software module gate is complete; the next code task is scoped optional-context parent integration and its own validation. Timing association remains unavailable |
 
 Use explicit time zones in evidence. Machine logs can retain UTC; user-facing
 status times are shown in **Europe/Moscow**. Never update a timestamp merely
