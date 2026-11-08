@@ -59,6 +59,9 @@ struct ExperimentView: View {
         }
         .background(Color.black.ignoresSafeArea())
         .tint(accent)
+        .onChange(of: model.isListening, initial: true) { _, isListening in
+            if isListening && adjustment == .carrier { adjustment = .display }
+        }
         .sheet(isPresented: $showPrivacy) { PrivacyMethodView() }
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView(model: model, renderer: rendererDiagnostics)
@@ -122,6 +125,16 @@ struct ExperimentView: View {
             }
             .padding(4)
             .background(Color(white: 0.08), in: RoundedRectangle(cornerRadius: 14))
+            if model.mode == .live {
+                Picker("LIVE acquisition", selection: Binding(
+                    get: { model.acquisitionKind }, set: { model.selectAcquisitionKind($0) }
+                )) {
+                    Text("Listen").tag(AcquisitionKind.listen)
+                    Text("Tone experiment").tag(AcquisitionKind.tone)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("acquisitionKindPicker")
+            }
         }
     }
 
@@ -131,10 +144,10 @@ struct ExperimentView: View {
                 Button { showDiagnostics = true } label: {
                     Label("Diagnostics & copy report", systemImage: "doc.text.magnifyingglass")
                 }
-                Toggle("Phase readout", isOn: $showReadout)
+                if model.phaseControlsAvailable { Toggle("Phase readout", isOn: $showReadout) }
                 Picker("Spectrum range", selection: $model.displayParameters.spectrumBand) {
                     ForEach(SpectrumDisplayBand.allCases, id: \.rawValue) { band in
-                        Text(band.displayName).tag(band)
+                        Text(bandTitle(band)).tag(band)
                     }
                 }
                 Picker("False-color palette", selection: $model.displayParameters.palette) {
@@ -180,7 +193,8 @@ struct ExperimentView: View {
                         presentation: model.presentation,
                         active: model.isVisualizing,
                         reduceMotion: reduceMotion,
-                        diagnostics: rendererDiagnostics
+                        diagnostics: rendererDiagnostics,
+                        audioIdentity: model.latestAudioIdentity
                     )
                     .accessibilityIdentifier("observatoryCanvas")
                     VStack(spacing: 12) {
@@ -205,11 +219,11 @@ struct ExperimentView: View {
             if dynamicTypeSize >= .xxLarge {
                 VStack(alignment: .leading, spacing: 12) {
                     viewportStatus
-                    if showReadout { phaseReadout }
+                    if showReadout && model.phaseControlsAvailable { phaseReadout }
                 }
             } else {
                 HStack(alignment: .top, spacing: 10) {
-                    if showReadout { phaseReadout }
+                    if showReadout && model.phaseControlsAvailable { phaseReadout }
                     Spacer(minLength: 0)
                     viewportStatus
                 }
@@ -246,7 +260,7 @@ struct ExperimentView: View {
                 .tracking(0.6)
                 .foregroundStyle(accent)
                 .multilineTextAlignment(.trailing)
-            Text(model.isRunning ? "● REC  " + clockText : model.isReplaying ? "PLAYBACK" : "STANDBY")
+            Text(model.isRunning ? "● " + (model.isListening ? "LISTEN  " : "REC  ") + clockText : model.isReplaying ? "PLAYBACK" : model.latestAudioIdentity != nil || model.latestSlice != nil ? "STOPPED DATA" : "STANDBY")
                 .font(.caption2.monospacedDigit().weight(.medium))
                 .foregroundStyle(model.isRunning ? Color(red: 1, green: 0.4, blue: 0.3) : .white)
             Text(model.measuredAcquisitionText)
@@ -285,7 +299,7 @@ struct ExperimentView: View {
 
     private var presentationSelector: some View {
         HStack(spacing: 3) {
-            presentationButton(.field, title: "FIELD")
+            if model.phaseControlsAvailable { presentationButton(.field, title: "FIELD") }
             presentationButton(.waterfall, title: "WATERFALL")
         }
         .padding(3)
@@ -336,7 +350,7 @@ struct ExperimentView: View {
         .font(.caption2.monospacedDigit())
         .foregroundStyle(subdued)
         .padding(.vertical, 4)
-        .accessibilityLabel("Frequency axis, " + model.displayParameters.spectrumBand.displayName)
+        .accessibilityLabel("Frequency axis, " + bandTitle(model.displayParameters.spectrumBand))
     }
 
     private var timeAxis: some View {
@@ -393,14 +407,16 @@ struct ExperimentView: View {
             }
             switch adjustment {
             case .carrier:
-                if model.mode == .replay { replayPanel } else { carrierPanel }
+                if model.mode == .replay { replayPanel }
+                else if model.isListening { displayPanel }
+                else { carrierPanel }
             case .display:
                 displayPanel
             case .readout:
                 detailedReadout
             }
             HStack(spacing: 0) {
-                adjustmentButton(.carrier, title: model.mode == .replay ? "Timeline" : "Carrier")
+                if !model.isListening { adjustmentButton(.carrier, title: model.mode == .replay ? "Timeline" : "Carrier") }
                 adjustmentButton(.display, title: "Display")
                 adjustmentButton(.readout, title: "Readout")
             }
@@ -469,7 +485,7 @@ struct ExperimentView: View {
         VStack(spacing: 10) {
             Picker("Spectrum range", selection: $model.displayParameters.spectrumBand) {
                 ForEach(SpectrumDisplayBand.allCases, id: \.rawValue) { band in
-                    Text(band.displayName).tag(band)
+                    Text(bandTitle(band)).tag(band)
                 }
             }
             .pickerStyle(.menu)
@@ -517,16 +533,23 @@ struct ExperimentView: View {
 
     private var detailedReadout: some View {
         VStack(alignment: .leading, spacing: 8) {
-            readoutRow("Phase-derived model", value: model.phaseDerivedDisplacementMillimeters.map { number($0, places: 2) + " mm" } ?? "Unavailable")
-            readoutRow("Tone / residual", value: qualityText + " dB")
-            readoutRow("Carrier amplitude", value: amplitudeText)
-            readoutRow("Pose / depth", value: "Unavailable")
-            Text(model.referenceMessage)
-                .font(.caption2)
-                .foregroundStyle(subdued)
-            Text("\(model.replayCount.formatted()) / \(model.replayCapacity.formatted()) frames stored")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(subdued)
+            if model.isListening {
+                Text("Microphone analysis · no generated tone")
+                Text(model.inputLevelText).monospacedDigit()
+                Text("Tone analysis not requested. Listen is not saved to Replay.")
+                    .font(.caption2).foregroundStyle(subdued)
+            } else {
+                readoutRow("Phase-derived model", value: model.phaseDerivedDisplacementMillimeters.map { number($0, places: 2) + " mm" } ?? "Unavailable")
+                readoutRow("Tone / residual", value: qualityText + " dB")
+                readoutRow("Carrier amplitude", value: amplitudeText)
+                readoutRow("Pose / depth", value: "Unavailable")
+                Text(model.referenceMessage)
+                    .font(.caption2)
+                    .foregroundStyle(subdued)
+                Text("\(model.replayCount.formatted()) / \(model.replayCapacity.formatted()) Tone/DEMO frames stored")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(subdued)
+            }
         }
     }
 
@@ -592,7 +615,12 @@ struct ExperimentView: View {
     private var consentPanel: some View {
         if model.mode == .live && !model.isRunning {
             VStack(alignment: .leading, spacing: 7) {
-                if model.liveIsSupported {
+                if model.liveIsSupported && model.isListening {
+                    Text("Microphone analysis · no generated tone")
+                        .font(.caption)
+                    Text("Local analysis · built-in microphone · 60 s max. Listening may interrupt other playback on this phone. Only the optional diagnostic report can be copied.")
+                        .font(.caption2).foregroundStyle(subdued)
+                } else if model.liveIsSupported {
                     Toggle("I agree to a speaker tone and live microphone analysis.", isOn: $model.consentGiven)
                         .font(.caption)
                         .disabled(model.state != .idle)
@@ -656,20 +684,22 @@ struct ExperimentView: View {
                         .tracking(0.8)
                 }
                 .frame(maxWidth: .infinity)
-                Button { model.resetPhaseReference() } label: {
-                    VStack(spacing: 5) {
-                        Image(systemName: "scope")
-                            .font(.title3)
-                            .frame(width: 48, height: 48)
-                            .background(Color(white: 0.12), in: Circle())
-                        Text("Reference").font(.caption2)
+                if model.phaseControlsAvailable {
+                    Button { model.resetPhaseReference() } label: {
+                        VStack(spacing: 5) {
+                            Image(systemName: "scope")
+                                .font(.title3)
+                                .frame(width: 48, height: 48)
+                                .background(Color(white: 0.12), in: Circle())
+                            Text("Reference").font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.plain)
+                    .disabled(!model.isRunning)
+                    .accessibilityLabel("Set a new phase reference")
+                    .accessibilityIdentifier("resetPhaseReferenceButton")
                 }
-                .buttonStyle(.plain)
-                .disabled(!model.isRunning)
-                .accessibilityLabel("Set a new phase reference")
-                .accessibilityIdentifier("resetPhaseReferenceButton")
             }
             Text(model.message)
                 .font(.caption2)
@@ -703,11 +733,11 @@ struct ExperimentView: View {
     private var transportTitle: String {
         if model.mode == .replay { return model.isReplaying ? "Pause" : "Play replay" }
         if model.state == .requestingPermission { return "Cancel" }
-        return model.isRunning || model.state == .preparing ? "Stop" : "Record"
+        return model.isRunning || model.state == .preparing ? "Stop" : model.isListening ? "Start listening" : "Record"
     }
     private var panelTitle: String {
         switch adjustment {
-        case .carrier: return model.mode == .replay ? "Replay timeline" : "Acoustic carrier"
+        case .carrier: return model.mode == .replay ? "Replay timeline" : model.isListening ? "Display adjustments" : "Acoustic carrier"
         case .display: return "Display adjustments"
         case .readout: return "Signal readout"
         }
@@ -724,6 +754,7 @@ struct ExperimentView: View {
             return "REPLAY · " + model.replaySourceName.uppercased()
         }
         if sourceIsSimulated { return "DEMO · SYNTHETIC" }
+        if model.isListening { return "LIVE · LISTEN" }
         return model.presentation == .field ? "LIVE · ABSTRACT" : "LIVE · ACOUSTIC"
     }
     private var phaseText: String {
@@ -745,9 +776,13 @@ struct ExperimentView: View {
     }
     private var historyAgeText: String {
         guard let oldest = model.spectrumHistory.first?.sampleTimestamp,
-              let newest = model.latestSlice?.sampleTimestamp ?? model.latestSpectrum?.sampleTimestamp,
+              let newest = model.latestAudioIdentity?.sampleTimestamp ?? model.latestSlice?.sampleTimestamp ?? model.latestSpectrum?.sampleTimestamp,
               newest >= oldest else { return "—" }
         return number(Double(newest - oldest) / 48_000, places: 1)
+    }
+
+    private func bandTitle(_ band: SpectrumDisplayBand) -> String {
+        model.isListening && band == .carrier ? "18–22 kHz" : band.displayName
     }
 
     private func setControlsVisible(_ visible: Bool) {

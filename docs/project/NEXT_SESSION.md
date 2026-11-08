@@ -77,26 +77,26 @@ a later stage is still pending. Do not fill a field from expectation.
 
 | Field | Latest checkpoint |
 | --- | --- |
-| Observed at | `2026-11-08T05:18:57+03:00` (Europe/Moscow) |
-| Coordinator / session | ChatGPT coordinator; all three bounded WD Codex implementation/review sessions completed |
-| Active objective / gate | G0 diagnostics and LIVE repair |
+| Observed at | `2026-11-08T05:28:01+03:00` (Europe/Moscow) |
+| Coordinator / session | ChatGPT coordinator; bounded WD implementation and independent review sessions completed |
+| Active objective / gate | G1 useful passive audio candidate; G0 distribution awaits exact-source CI |
 | Remote base at session start | `4be8724f244cd2e478f5d6877f798986fcaa2ae9`; refresh before editing |
-| Working branch / exact commit | `work/diagnostics-0.2.1`; latest native-verified source `722ee840ae8f72d01cec0a3016fa8f52320726c4`; subsequent review-fix commit not yet recorded |
-| Working directory / owner | Isolated G0 integration worktree; coordinator owns publication, assigned follow-up corrections are in progress. G1 remains in a separate integration tree |
-| Changed paths / uncommitted work | App diagnostic UI and runtime, renderer, portable diagnostics/self-test, hosted/core regressions, generated project, version configuration, English docs |
+| Working branch / exact commit | G1 integration candidate for `work/passive-audio-0.2.2`, based on public G0 `d4903b847e610761a4d9c7f94ee58e889a4d6d31`; G1 publication commit to be recorded after guarded publication |
+| Working directory / owner | Separate G1 integration worktree; scoped writers finished, coordinator owns publication and native validation |
+| Changed paths / uncommitted work | Listen graph/control, common audio analysis result, no-tone UI/diagnostics, missing-data renderer, permission/reviewer text, targeted tests, 0.2.2 (4) configuration and English documentation |
 | Confirmed defect and reproduction | Static audit: startup status claimed activity before input, fixed nominal rate label, silent renderer failures, no preserved stage evidence. No hardware root cause established |
 | Hypotheses still open | Physical-device failure mechanism; no diagnostic report yet |
-| Implemented changes | Measured stage counters, bounded event log, local JSON preview/copy, silent analytical self-test, LIVE stall stop reason, full-band Waterfall with peak-preserving downsampling |
-| Automated validation / run URLs | Latest [run 42436184984](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42436184984) succeeded for `722ee840`: 63 core + 16 hosted tests, zero failures; core Release, Simulator Debug, unsigned device Release, and four native PNGs passed. Waterfall visually inspected; full-width input readout is legible. Subsequent review fixes require another exact-source run; see [validation record](../DIAGNOSTIC_RELEASE_VALIDATION.md) |
+| Implemented changes | Input-only Listen, input statistics/spectrum independent of tone, captured-duration cap, no fabricated phase/Replay, retained stopped history and current output gate; G0 watchdog/copy fixes integrated |
+| Automated validation / run URLs | G0 `722ee840` passed 63 core + 16 hosted tests; amended G0 `d4903b84` is undergoing [run 42438050312](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438050312). G1 native execution pending; see [passive evidence](../PASSIVE_AUDIO_VALIDATION.md) |
 | Retained artifact | `13598909772`, SHA-256 `8f035b1ed24a7ec3e8f01c4d87480d89b0f0cd5251c07bf3ef245be4253a3838`; copied to WD |
-| Independent review / examined commit | Earlier WD review of `ca444241` led to event-clock, Unicode-cap, GPU-timing and privacy corrections. Copilot findings after the `722ee840` pass are corrected locally: JSON preview selection disabled, callback-window baseline fixed, troubleshooting retained after Stop, and five model regressions added. Exact amended-source native CI remains required |
-| Candidate version / build | intended `0.2.1` / `3`; verify before dispatch |
+| Independent review / examined commit | WD review of the hash-verified G1 delta over `722ee840` found nearest-row substitution for a missing current spectrum. Correction plus texture regression are integrated. Local review covered subsequent G0 merge and Listen model integration. No physical audio result is claimed |
+| Candidate version / build | G0 0.2.1 (3); separate G1 0.2.2 (4), both delivery-pending at this checkpoint |
 | Apple validation / upload / processing | No 0.2.1 (3) upload dispatched; pending for the amended candidate |
 | TestFlight group / tester state | pending for the new candidate |
 | Physical-device observations | Installation/testing of build 2 reported; candidate checks pending |
-| Running jobs / session IDs / last checked | The three initial WD Codex sessions completed. G1 implementation `01a1b8d8-4802-7141-b421-899b250ca717` exited 0 after 674.7667 seconds at 05:00:18 Europe/Moscow. A subsequent read-only WD Codex review of its 19-file delta started at `2026-11-08T02:15:44.4921467Z`; inspect `passive-review-022-state.json` before resuming. G1 native validation is pending. G0 follow-up corrections are ready for publication; no amended CI run is recorded yet |
+| Running jobs / session IDs / last checked | All four WD Codex implementation/review sessions completed. Latest read-only G1 review `01a1b8f0-b557-7350-a176-1aaff8befb57` exited 0 after 230.3414 seconds at `2026-11-08T02:19:34.8335466Z`. G0 native run 42438050312 is the current release gate; G1 native run has not started |
 | G1 candidate | Intended **0.2.2 (4)**, true Listen/Tone separation; isolated from G0, not natively verified or delivered |
-| Blocker / smallest next action | Complete the four G0 review follow-ups, record the amended SHA, and run exact-candidate CI before merge/upload; then collect a short physical-device diagnostic report |
+| Blocker / smallest next action | Pass exact G0/G1 native gates and deliver reviewed binaries, then obtain a phone diagnostic capture; keep G2 at a separate design gate |
 
 Use explicit time zones in evidence. Machine logs can retain UTC; user-facing
 status times are shown in **Europe/Moscow**. Never update a timestamp merely

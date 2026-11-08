@@ -20,7 +20,9 @@ final class DiagnosticsIntegrationTests: XCTestCase {
         init(processing: SignalProcessingSession, startupCallbacks: Int) {
             self.processing = processing
             self.startupCallbacks = startupCallbacks
-            snapshot = AudioSessionDiagnosticSnapshot(configuration: processing.configuration)
+            snapshot = AudioSessionDiagnosticSnapshot(
+                configuration: processing.configuration, acquisitionKind: processing.acquisitionKind
+            )
         }
 
         func start() throws {
@@ -54,6 +56,7 @@ final class DiagnosticsIntegrationTests: XCTestCase {
             processing.diagnostics.recordInputCallback(frameCount: count)
             processing.diagnostics.offeredSamples.wrappingAdd(UInt64(count), ordering: .relaxed)
             processing.diagnostics.acceptedInputCallbacks.wrappingAdd(1, ordering: .releasing)
+            processing.control.capturedSamples.wrappingAdd(UInt64(count), ordering: .releasing)
         }
 
         /// Actual synthetic PCM flows through the production ring and worker.
@@ -71,6 +74,7 @@ final class DiagnosticsIntegrationTests: XCTestCase {
                 processing.diagnostics.enqueuedSamples.wrappingAdd(UInt64(count), ordering: .relaxed)
             }
             processing.diagnostics.acceptedInputCallbacks.wrappingAdd(1, ordering: .releasing)
+            processing.control.capturedSamples.wrappingAdd(UInt64(count), ordering: .releasing)
             nextSample += UInt64(count)
         }
     }
@@ -101,6 +105,9 @@ final class DiagnosticsIntegrationTests: XCTestCase {
     private func startLiveFixture(_ fixture: RuntimeFixture) throws -> (ExperimentModel, RecordingAudioSession) {
         let model = ExperimentModel(arguments: [], runtime: fixture.runtime)
         model.setAppActive(true)
+        // G1 normally opens Listen. These regressions retain the active-tone
+        // LIVE branch and its separate output-consent requirement.
+        model.selectAcquisitionKind(.tone)
         model.startExperiment()
         XCTAssertTrue(fixture.audioSessions.isEmpty, "The fixture must not bypass explicit LIVE consent")
         model.consentGiven = true
@@ -316,6 +323,8 @@ final class DiagnosticsIntegrationTests: XCTestCase {
             XCTAssertEqual(audio.stopCount, 0)
         }
         let beforeStop = model.diagnosticSnapshot
+        XCTAssertTrue(beforeStop.session.transmitEnabled)
+        XCTAssertEqual(beforeStop.audio?.transmitConfigured, true)
         XCTAssertEqual(beforeStop.pipeline.processedFrames, 3)
         XCTAssertEqual(beforeStop.pipeline.spectrumFrames, 3)
         XCTAssertEqual(beforeStop.pipeline.validPhaseFrames, 0)
@@ -325,6 +334,9 @@ final class DiagnosticsIntegrationTests: XCTestCase {
         fixture.now = 110
         model.refreshDiagnostics()
         XCTAssertEqual(audio.stopCount, 1)
+        XCTAssertFalse(model.diagnosticSnapshot.session.transmitEnabled)
+        XCTAssertEqual(model.diagnosticSnapshot.audio?.transmitConfigured, true,
+                       "Retained tone configuration is distinct from the stopped app output gate")
         XCTAssertEqual(model.diagnosticSnapshot.session.stopReason, "user")
         XCTAssertEqual(model.diagnosticSnapshot.pipeline.processedFrames, 3)
         XCTAssertEqual(try XCTUnwrap(model.diagnosticSnapshot.pipeline.latestInput?.rms), 0.25, accuracy: 1e-9)
@@ -355,5 +367,78 @@ final class DiagnosticsIntegrationTests: XCTestCase {
         XCTAssertNotNil(model.diagnosticSnapshot.pipeline.latestInput)
         XCTAssertEqual(audio.stopCount, 1)
         XCTAssertFalse(audio.processing.control.audioEnabled.load(ordering: .acquiring))
+    }
+
+    func testListenModelProcessesFixturePCMWithoutToneConsentOrReplayAndRetainsStoppedData() async throws {
+        // Permission and hardware are supplied by the same recording fixture.
+        // PCM still traverses the production ring, DSP, callbacks, and model;
+        // this test establishes software behavior, never microphone operation.
+        let fixture = RuntimeFixture()
+        let model = ExperimentModel(arguments: [], runtime: fixture.runtime)
+        defer { model.stopExperiment() }
+        model.setAppActive(true)
+        XCTAssertEqual(model.acquisitionKind, .listen)
+        XCTAssertFalse(model.consentGiven)
+        XCTAssertTrue(model.canStart, "Listen does not request consent to speaker output")
+        model.startExperiment()
+        let audio = try XCTUnwrap(fixture.audioSessions.first)
+        XCTAssertEqual(audio.processing.acquisitionKind, .listen)
+        XCTAssertEqual(audio.startCount, 1)
+        XCTAssertTrue(model.isRunning)
+        XCTAssertFalse(model.consentGiven)
+
+        fixture.now = 100.25
+        audio.deliverPCMFrame()
+        try await eventually {
+            model.latestAudioIdentity?.sampleTimestamp == 0 && model.latestSpectrum != nil
+        }
+        XCTAssertTrue(model.monitorAcquisition())
+        let running = model.diagnosticSnapshot
+        let identity = try XCTUnwrap(model.latestAudioIdentity)
+        let spectrum = try XCTUnwrap(model.latestSpectrum)
+        let history = model.spectrumHistory
+        XCTAssertEqual(running.pipeline.health, "healthy")
+        XCTAssertEqual(running.session.acquisitionKind, "listen")
+        XCTAssertFalse(running.session.transmitEnabled)
+        XCTAssertEqual(running.audio?.transmitConfigured, false)
+        XCTAssertNil(running.session.carrierHz)
+        XCTAssertNil(running.session.referenceEpoch)
+        XCTAssertEqual(running.pipeline.latestDSP?.toneAnalysis, "not_requested")
+        XCTAssertNil(model.latestFrame)
+        XCTAssertNil(model.latestSlice)
+        XCTAssertNil(model.phaseDerivedDisplacementMillimeters)
+        XCTAssertFalse(model.phaseControlsAvailable)
+        XCTAssertEqual(model.replayCount, 0)
+        XCTAssertEqual(running.pipeline.processedFrames, 1)
+        XCTAssertEqual(running.pipeline.spectrumFrames, 1)
+        XCTAssertEqual(running.pipeline.capturedSamples, 2_048)
+        XCTAssertEqual(running.pipeline.syntheticSamples, 0)
+        XCTAssertEqual(running.pipeline.renderedSamples, 0)
+        XCTAssertEqual(running.pipeline.sourceCallbacks, 0)
+        XCTAssertEqual(try XCTUnwrap(running.pipeline.latestInput?.rms), 0.25, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(running.pipeline.latestInput?.peak), 0.25, accuracy: 1e-9)
+        XCTAssertEqual(model.elapsedSeconds, 2_048.0 / 48_000, accuracy: 1e-9)
+        XCTAssertEqual(spectrum.sampleTimestamp, 0)
+        XCTAssertEqual(spectrum.frequenciesHz[0], 0)
+        XCTAssertEqual(spectrum.magnitudesDBFS[0], -12.0412, accuracy: 0.0001)
+        XCTAssertEqual(history.count, 1)
+
+        model.stopExperiment()
+        try await eventually { !model.isFinishingProcessing }
+        fixture.now = 105
+        model.refreshDiagnostics()
+        XCTAssertEqual(model.state, .idle)
+        XCTAssertEqual(audio.stopCount, 1)
+        XCTAssertFalse(audio.processing.control.audioEnabled.load(ordering: .acquiring))
+        XCTAssertEqual(model.latestAudioIdentity, identity)
+        XCTAssertEqual(model.latestSpectrum, spectrum)
+        XCTAssertEqual(model.spectrumHistory, history)
+        XCTAssertEqual(model.replayCount, 0)
+        XCTAssertEqual(model.diagnosticSnapshot.session.stopReason, "user")
+        XCTAssertEqual(model.diagnosticSnapshot.session.acquisitionKind, "listen")
+        XCTAssertFalse(model.diagnosticSnapshot.session.transmitEnabled)
+        XCTAssertEqual(model.diagnosticSnapshot.session.elapsedSeconds, 0.25, accuracy: 1e-9)
+        XCTAssertEqual(model.diagnosticSnapshot.pipeline.processedFrames, 1)
+        XCTAssertEqual(try XCTUnwrap(model.diagnosticSnapshot.pipeline.latestInput?.rms), 0.25, accuracy: 1e-9)
     }
 }

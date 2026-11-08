@@ -1,13 +1,15 @@
 import Foundation
 
-/// Single-consumer Hann-weighted least-squares tone estimator.
+/// Single-consumer input analysis with an optional Hann-weighted tone estimate.
 ///
 /// SAFETY CONTRACT for `@unchecked Sendable`: after construction, all calls to
-/// `processNextFrame` and `resetCalibration` belong to one serial DSP context.
+/// `processNextAnalysisFrame`, `processNextFrame`, and `resetCalibration` belong
+/// to one serial DSP context.
 /// No UI or audio producer may mutate this object. The queue it consumes has its
 /// own documented SPSC synchronization. The input workspace is allocated once.
 public final class PhaseSensingEngine: @unchecked Sendable {
     public let configuration: RadarConfiguration
+    public let acquisitionKind: AcquisitionKind
     /// Read on the owning serial DSP context, then pass this value to the UI.
     /// Nonfinite input or an unusable in-frame capture timeline clears the
     /// spectrum rather than retaining a stale or incorrectly timed frame.
@@ -36,11 +38,13 @@ public final class PhaseSensingEngine: @unchecked Sendable {
 
     public init(
         ringBuffer: SPSCFloatRingBuffer,
-        configuration: RadarConfiguration = .standard
+        configuration: RadarConfiguration = .standard,
+        acquisitionKind: AcquisitionKind = .tone
     ) {
         precondition(configuration.frameSize <= ringBuffer.capacity)
         self.ringBuffer = ringBuffer
         self.configuration = configuration
+        self.acquisitionKind = acquisitionKind
         self.spectrumAnalyzer = SpectrumAnalyzer(sampleRateHz: configuration.sampleRateHz)
         self.input = .allocate(capacity: configuration.frameSize)
         self.input.initialize(repeating: 0, count: configuration.frameSize)
@@ -85,13 +89,22 @@ public final class PhaseSensingEngine: @unchecked Sendable {
         input.deallocate()
     }
 
+    /// Compatibility entry point for active-tone consumers. Both entry points
+    /// consume the same ring; use only one on the owning serial DSP context.
+    /// A Listen window has no tone result; use `processNextAnalysisFrame` to
+    /// receive its aggregate input evidence and spectrum.
     public func processNextFrame() -> PhaseTelemetryFrame? {
+        processNextAnalysisFrame()?.tone
+    }
+
+    public func processNextAnalysisFrame() -> AudioAnalysisFrame? {
         guard let read = ringBuffer.read(into: input, count: configuration.frameSize) else {
             return nil
         }
-        latestInputStatistics = SignalBlockStatistics.measure(
+        let inputStatistics = SignalBlockStatistics.measure(
             UnsafeBufferPointer(start: input, count: configuration.frameSize)
         )
+        latestInputStatistics = inputStatistics
         if read.samplesAreContiguous && read.timestampsAreValid {
             latestSpectrum = spectrumAnalyzer.analyze(
                 samples: UnsafeBufferPointer(start: input, count: configuration.frameSize),
@@ -100,10 +113,28 @@ public final class PhaseSensingEngine: @unchecked Sendable {
         } else {
             latestSpectrum = nil
         }
-        let discontinuity = !read.samplesAreContiguous || !read.timestampsAreValid
-            || (expectedSampleTime != nil && expectedSampleTime != read.startSampleTime)
+        let timing = AudioAnalysisTiming(
+            timestampsAreValid: read.timestampsAreValid,
+            samplesAreContiguous: read.samplesAreContiguous,
+            hasGapBeforeWindow: expectedSampleTime != nil && expectedSampleTime != read.startSampleTime
+        )
         expectedSampleTime = read.nextSampleTime
 
+        let tone = acquisitionKind == .tone
+            ? analyzeTone(read: read, discontinuity: timing.discontinuityDetected) : nil
+        return AudioAnalysisFrame(
+            acquisitionKind: acquisitionKind,
+            sampleTimestamp: read.startSampleTime,
+            timing: timing,
+            inputStatistics: inputStatistics,
+            spectrum: latestSpectrum,
+            tone: tone,
+            droppedWriteBlocks: ringBuffer.droppedWriteBlocks,
+            droppedWriteSamples: ringBuffer.droppedWriteSamples
+        )
+    }
+
+    private func analyzeTone(read: SampleRead, discontinuity: Bool) -> PhaseTelemetryFrame {
         var correlationC = 0.0
         var correlationS = 0.0
         var totalEnergy = 0.0

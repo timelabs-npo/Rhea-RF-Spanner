@@ -1,13 +1,17 @@
 # Rhea RF Spanner
 
-An inspectable iOS application for **acoustic phase experiments** using an
-iPhone's built-in speaker and microphone. The display name is **Rhea RF Spanner**;
+An inspectable iOS application for **passive audio analysis and acoustic phase
+experiments** using an iPhone's built-in microphone and, for an explicitly
+selected tone experiment, its speaker. The display name is **Rhea RF Spanner**;
 the public source repository is
 [timelabs-npo/Rhea-RF-Spanner](https://github.com/timelabs-npo/Rhea-RF-Spanner).
 
 The Observatory update adds an **18–22 kHz acoustic carrier grid in 500 Hz steps**,
 silent deterministic **DEMO**, in-memory **REPLAY**, and an actual sample-spectrum
-**Waterfall**. LIVE uses a verified 48 kHz built-in audio route. The app does not
+**Waterfall**. The G1 source change adds **LIVE · LISTEN**: input-only analysis
+with no generated tone, alongside the existing active Tone experiment. LIVE
+requires an actual 48 kHz built-in input; the passive branch does not require an
+output route. The app does not
 access RF samples, cellular baseband hardware, or wireless packet traffic.
 Field graphics are explicitly abstract (LIVE) or synthetic (DEMO). They do not
 represent a measured spatial radar image. A phase-derived displacement is a
@@ -20,54 +24,44 @@ False color does not imply thermal sensing.
 
 ## Build and validation status
 
-**Current work: 0.2.1 (3), diagnostic candidate.** The owner confirms that
-0.2.0 (2) installed on an iPhone, but reports that it does not yet provide useful
-behavior. No physical-device diagnostic dump has been captured. The cause is
-therefore still unconfirmed. This candidate adds observed input/DSP/GPU counters,
-bounded error history, an explicit **Copy Diagnostic Dump** action, a silent
-analytical self-test, and a **0–24 kHz** Waterfall option. Native validation and
-delivery of this candidate are pending; the successful runs below belong to
-the preceding release.
+**Current source candidate: 0.2.2 (4), useful passive audio.** LIVE opens in
+Listen, with measured levels and spectrum independently of the active tone
+experiment. The implementation and focused digital fixtures are ready for
+native review; exact-candidate Mac CI and TestFlight delivery are pending.
+See [the passive-audio behavior](docs/PASSIVE_AUDIO.md) and
+[its evidence record](docs/PASSIVE_AUDIO_VALIDATION.md).
+
+The owner installed **0.2.0 (2)** and reported that it did not yet provide useful
+behavior. No physical-device diagnostic report is available, so the underlying
+hardware/runtime cause remains unconfirmed. The G0 diagnostic foundation adds
+observed input/DSP/GPU counters, retained error and stop evidence, a protected
+Copy Diagnostic Dump action, an analytical self-test, and full-band Waterfall.
+
+| Version / scope | Observed evidence |
+| --- | --- |
+| 0.2.0 (2), previous release | Apple processing VALID, internal testing enabled, owner-confirmed installation and initial test; useful physical operation remains unverified |
+| 0.2.1 (3), diagnostic foundation | Source `722ee840` passed 63 core + 16 hosted tests, both iOS builds and four native captures in [run 42436184984](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42436184984). Subsequent watchdog/copy corrections at `d4903b84` are undergoing [exact-source validation](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42438050312); delivery pending |
+| 0.2.2 (4), this passive-audio candidate | Separate WD Codex implementation and review, integration corrections and new digital/hosted fixtures; native execution and delivery pending |
+
+The [G0 evidence record](docs/DIAGNOSTIC_RELEASE_VALIDATION.md) preserves exact
+sources, test counts, review findings and artifact identities. WD sessions have
+not compiled Swift: native builds execute on Mac CI. Digital fixtures and
+Simulator screenshots do not establish physical microphone performance or
+calibration.
 
 The staged [project roadmap](docs/project/ROADMAP.md),
 [resumable checkpoint](docs/project/NEXT_SESSION.md), and
 [tracking issue](https://github.com/timelabs-npo/Rhea-RF-Spanner/issues/2) distinguish
-the current acoustic application from planned AR/LiDAR and external-probe work.
+implemented audio features from planned AR/LiDAR, external probes and shared
+sessions. A verified software candidate and field confirmation are separate gates.
 
-**Previous release native validation passed:** the release signal core compiled, all **41 core
-tests** and **5 Simulator-hosted application tests** passed, and the iOS Simulator
-Debug and unsigned iOS device Release apps built successfully with Xcode 26.3.
-The hosted suite includes three renderer regressions for replaced spectra,
-compressed capture gaps, and contiguous history, plus two session lifecycle tests.
-The compiled app launched in an iPhone 17 Pro Simulator and produced actual
-idle, DEMO Field, and DEMO Waterfall screenshots.
-See [GitHub Actions run 42416851915](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42416851915),
-which tested source commit `a93da56e45726d84e27f567c323eeda45b17d7d4`.
-The same run passed a credential-free check of the installed Xcode export and
-`altool` interfaces. It did not sign or upload an app.
-
-Logs, exact test scope, and the subsequent workflow-only correction are recorded in
-[docs/TESTFLIGHT_PREPARATION_VALIDATION.md](docs/TESTFLIGHT_PREPARATION_VALIDATION.md).
-The earlier Observatory run and retained native screenshots remain documented in
-[docs/OBSERVATORY_VALIDATION.md](docs/OBSERVATORY_VALIDATION.md).
-The merged source `9bed85a1787aafabd919994e38eae66d3169c448` also passed
-[main's native CI](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420093956),
-CodeQL, and Code Quality checks. It then produced a **signed archive and App
-Store Connect IPA for version 0.2.0, build 2** in
-[distribution run 42420624092, attempt 2](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42420624092).
-The [signed export validation record](docs/SIGNED_EXPORT_VALIDATION.md) retains
-the manifest and artifact hashes for that export-only run. Subsequently,
-[distribution run 42423704040](https://github.com/timelabs-npo/Rhea-RF-Spanner/actions/runs/42423704040)
-rebuilt the same source/version/build, **passed Apple validation, and reported
-successful App Store Connect upload**. The
-[upload validation record](docs/TESTFLIGHT_UPLOAD_VALIDATION.md) identifies the
-uploaded IPA and its hashes. Apple processing, TestFlight availability, and
-physical-iPhone acoustic validation are separate stages. App Store Connect
-subsequently confirmed processing as **VALID** and displayed build 2 as
-**Ready to Test** after assignment to **Rhea RF Spanner Internal**. That group
-was verified with one build and one invited tester. The owner subsequently
-confirmed installation and an initial test. Physical-device acoustic behavior
-has not yet passed a documented validation procedure.
+Earlier release evidence remains in the
+[Observatory report](docs/OBSERVATORY_VALIDATION.md),
+[TestFlight preparation report](docs/TESTFLIGHT_PREPARATION_VALIDATION.md),
+[signed export record](docs/SIGNED_EXPORT_VALIDATION.md), and
+[Apple upload/processing record](docs/TESTFLIGHT_UPLOAD_VALIDATION.md).
+The images below are the retained **previous-release DEMO captures**, not a
+physical microphone or spatial RF measurement.
 
 | Silent DEMO Field | Sample-spectrum Waterfall |
 | --- | --- |
@@ -117,49 +111,60 @@ does not need a local laptop or to copy source code from chat.
 
 ## Using the app
 
-1. Read **Privacy & method** while idle. Select **DEMO** to explore the full
-   processing and display path without microphone permission or speaker output.
-2. For **LIVE**, agree to microphone use and the selected acoustic tone, then
-   start. On first permission approval the app returns to idle; start again
-   deliberately when ready to emit the tone.
-3. Select a carrier on the 500 Hz grid. Changing it starts a new acquisition
-   epoch and phase reference. Gain, palette, and persistence affect only the
-   display, not samples, fitted phase, or synthetic noise.
-4. Inspect the tone/residual ratio, phase, and spectrum. Signal loss invalidates
-   phase; recovery establishes a new reference without bridging the gap.
-5. Stop at any time. Select **REPLAY** to inspect retained slices and their
-   original LIVE/DEMO labels. No microphone or tone runs during Replay.
+1. Read **Privacy & method** while idle. **LIVE · LISTEN** is the ordinary audio
+   entry point. Tap **Start listening** to request microphone permission if needed.
+   A first permission grant returns to idle; start again deliberately.
+2. Listen analyzes the built-in microphone without constructing a tone source.
+   Inspect RMS in dBFS, peak amplitude in full-scale units, and **Full audio ·
+   0–24 kHz** Waterfall. These are digital levels, not calibrated sound pressure.
+   Other playback on this phone may
+   be suppressed while its recording-only session is active.
+3. For active phase work, explicitly choose **Tone experiment**, agree to its
+   speaker output, then start. Its 18–22 kHz carrier grid and phase/reference
+   behavior remain available. Selecting Listen or Tone ends the current run and
+   requires another Start; the selection itself never restarts acquisition.
+4. Gain, palette, persistence, and spectrum range affect only presentation. The
+   Listen narrow range is labelled **18–22 kHz**; it does not create a carrier.
+   Listen has no tone-fit, phase, displacement, or reference-reset controls.
+5. Stop at any time. The bounded passive Waterfall remains labelled as stopped
+   history; a new Listen run starts new history and a new capture clock. **REPLAY**
+   contains only active Tone/DEMO records with their original LIVE/DEMO labels.
+   Passive Replay is deferred; passive frames are never appended to the v1 tape.
+   **DEMO** remains a silent deterministic simulation, never live microphone data.
 6. Open **Diagnostics** to inspect observed callbacks, input RMS/peak, processed
    frames, GPU completions, and retained operational events. Run the silent core
    self-test to check an analytical fixture without starting audio. **Inspect
    JSON report** previews the aggregate report; **Copy Diagnostic Dump** copies
    it locally only when you explicitly request it.
 
-The ordinary launch uses **Full audio · 0–24 kHz Waterfall** so incoming sound
-can be inspected even when a valid ultrasonic phase is unavailable. The carrier
-view remains selectable. Changing the displayed frequency range does not change
-acquisition: LIVE still emits the selected tone. **MIC SESSION** means that the
+The ordinary launch uses Listen and **Full audio · 0–24 kHz Waterfall** so incoming
+sound can be inspected without an ultrasonic carrier fit or generated tone.
+**MIC SESSION** means that the
 audio session is active; the separate observed-input status confirms whether
 accepted callbacks are arriving. A LIVE input or processing stall stops the
 session with a retained reason rather than silently remaining active.
 
 The app stops when it loses foreground activity, audio is interrupted, the route
 changes, or audio services reset. It never automatically restarts after these
-events. An explicit carrier change during a running session performs a controlled
+events. An explicit carrier change during a running Tone experiment performs a controlled
 restart with a new reference. It accepts
-the built-in speaker/microphone route at the verified 48 kHz format and reports
+the built-in microphone at the checked 48 kHz format; Tone also requires the
+built-in speaker. It reports
 unsupported hardware routes instead of trapping on a failed precondition.
 
-The fixed transmit amplitude is 0.02 of digital full scale, with a 10 ms ramp.
+In Tone experiment, the fixed transmit amplitude is 0.02 of digital full scale,
+with a 10 ms ramp.
 This is not a sound-pressure calibration or a claim that the tone is inaudible.
 Keep the phone away from ears, use the experiment with nearby people's agreement,
 and stop if it is uncomfortable. Start with low device volume.
 
 ## Data handling
 
-Microphone samples are processed in volatile memory. Up to 2,048 derived
-telemetry slices and their bounded companion spectra are retained in memory for
-Replay; raw audio is not recorded. Closing the process loses the tape. There is
+Microphone samples are processed in volatile memory. Listen retains only its
+bounded live display history; it does not write Replay records. Up to 2,048
+derived active Tone/DEMO telemetry slices and their bounded companion spectra
+are retained in memory for Replay; raw audio is not recorded. Closing the
+process loses the tape and display history. There is
 no raw-audio or Replay export UI, account, server, telemetry SDK, advertising,
 remote configuration, background audio mode, or downloaded code. Diagnostics
 can be previewed as JSON and copied explicitly. The report contains aggregate

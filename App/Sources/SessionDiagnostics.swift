@@ -50,10 +50,14 @@ struct SessionDiagnosticState: Codable, Sendable {
     let appIsActive: Bool
     let runID: UInt64?
     let referenceEpoch: UInt32?
-    let carrierHz: Int
+    let carrierHz: Int?
     /// Duration relative to this acquisition run, never system uptime.
     let elapsedSeconds: Double
     let stopReason: String?
+    /// Describes the retained run, including after a UI mode change.
+    var acquisitionKind: String? = nil
+    /// Current app tone gate. False after stopping, even for a retained tone run.
+    var transmitEnabled = false
 }
 
 struct SessionDiagnosticError: Codable, Sendable {
@@ -75,6 +79,9 @@ struct SessionDiagnosticError: Codable, Sendable {
 }
 
 struct AudioSessionDiagnosticSnapshot: Codable, Sendable {
+    let acquisitionKind: String
+    /// Immutable graph intent; this may remain true after a tone run has stopped.
+    let transmitConfigured: Bool
     var stage = "not_started"
     var activationSucceeded = false
     var deactivationSucceeded: Bool?
@@ -88,6 +95,8 @@ struct AudioSessionDiagnosticSnapshot: Codable, Sendable {
     let requestedTapBufferFrames: Int
     var actualSampleRateHz: Double?
     var inputSampleRateHz: Double?
+    var inputHardwareSampleRateHz: Double?
+    var inputHardwareChannels: Int?
     var outputSampleRateHz: Double?
     var inputChannels: Int?
     var outputChannels: Int?
@@ -96,7 +105,9 @@ struct AudioSessionDiagnosticSnapshot: Codable, Sendable {
     var lastError: SessionDiagnosticError?
     var cleanupError: SessionDiagnosticError?
 
-    init(configuration: RadarConfiguration) {
+    init(configuration: RadarConfiguration, acquisitionKind: AcquisitionKind = .tone) {
+        self.acquisitionKind = acquisitionKind.rawValue
+        transmitConfigured = acquisitionKind.transmitEnabled
         requestedSampleRateHz = configuration.sampleRate
         requestedIOBufferDurationSeconds = Double(configuration.frameSize) / configuration.sampleRate
         requestedTapBufferFrames = configuration.frameSize
@@ -139,6 +150,10 @@ struct SessionDSPDiagnostic: Codable, Sendable {
     let spectrumBinCount: Int
     let spectrumPeakHz: Double?
     let spectrumPeakDBFS: Double?
+    var acquisitionKind: String? = nil
+    var toneAnalysis = "requested"
+    var timestampsAreValid: Bool? = nil
+    var samplesAreContiguous: Bool? = nil
 }
 
 struct PipelineDiagnosticSnapshot: Codable, Sendable {
@@ -151,6 +166,7 @@ struct PipelineDiagnosticSnapshot: Codable, Sendable {
     var syntheticSamples: UInt64 = 0
     var sourceCallbacks: UInt64 = 0
     var renderedSamples: UInt64 = 0
+    var capturedSamples: UInt64 = 0
     var processedFrames: UInt64 = 0
     var spectrumFrames: UInt64 = 0
     var validPhaseFrames: UInt64 = 0
@@ -283,7 +299,8 @@ final class SessionDiagnosticCounters: Sendable {
                 toneResidualDB: finiteDiagnosticValue(frame.qualityDB),
                 relativePhaseRadians: finiteDiagnosticValue(frame.relativePhaseRadians),
                 spectrumBinCount: spectrum?.magnitudesDBFS.count ?? 0,
-                spectrumPeakHz: peakFrequency, spectrumPeakDBFS: peakLevel
+                spectrumPeakHz: peakFrequency, spectrumPeakDBFS: peakLevel,
+                acquisitionKind: "tone"
             )
         )
         latestDSP.withLock { $0 = aggregate }
@@ -297,7 +314,46 @@ final class SessionDiagnosticCounters: Sendable {
         processedFrames.wrappingAdd(1, ordering: .releasing)
     }
 
-    func snapshot(ring: SPSCFloatRingBuffer, renderedSamples: UInt64) -> PipelineDiagnosticSnapshot {
+    /// Common consumer evidence. Listen deliberately has no phase validity or
+    /// carrier estimate; timing/nonfinite evidence remains independently useful.
+    func recordProcessedAnalysisFrame(_ frame: AudioAnalysisFrame) {
+        if let tone = frame.tone {
+            recordProcessedFrame(tone, statistics: frame.inputStatistics, spectrum: frame.spectrum)
+            return
+        }
+        var peakLevel: Double?
+        var peakFrequency: Double?
+        if let spectrum = frame.spectrum {
+            for (frequency, level) in zip(spectrum.frequenciesHz, spectrum.magnitudesDBFS)
+                where frequency.isFinite && level.isFinite && level > -160 {
+                if peakLevel == nil || Double(level) > (peakLevel ?? -.infinity) {
+                    peakLevel = Double(level)
+                    peakFrequency = Double(frequency)
+                }
+            }
+            spectrumFrames.wrappingAdd(1, ordering: .relaxed)
+        }
+        let aggregate = LatestDSP(
+            input: SessionInputStatistics(frame.inputStatistics),
+            output: SessionDSPDiagnostic(
+                sampleIndex: frame.sampleTimestamp, validity: "not_requested",
+                carrierAmplitude: nil, toneResidualDB: nil, relativePhaseRadians: nil,
+                spectrumBinCount: frame.spectrum?.magnitudesDBFS.count ?? 0,
+                spectrumPeakHz: peakFrequency, spectrumPeakDBFS: peakLevel,
+                acquisitionKind: frame.acquisitionKind.rawValue, toneAnalysis: "not_requested",
+                timestampsAreValid: frame.timing.timestampsAreValid,
+                samplesAreContiguous: frame.timing.samplesAreContiguous
+            )
+        )
+        latestDSP.withLock { $0 = aggregate }
+        if frame.timing.discontinuityDetected { discontinuousFrames.wrappingAdd(1, ordering: .relaxed) }
+        if frame.inputStatistics.nonFiniteSampleCount > 0 { nonFiniteFrames.wrappingAdd(1, ordering: .relaxed) }
+        processedFrames.wrappingAdd(1, ordering: .releasing)
+    }
+
+    func snapshot(
+        ring: SPSCFloatRingBuffer, renderedSamples: UInt64, capturedSamples: UInt64 = 0
+    ) -> PipelineDiagnosticSnapshot {
         var result = PipelineDiagnosticSnapshot()
         result.inputCallbacks = inputCallbacks.load(ordering: .acquiring)
         result.ignoredInputCallbacks = ignoredInputCallbacks.load(ordering: .relaxed)
@@ -308,6 +364,7 @@ final class SessionDiagnosticCounters: Sendable {
         result.syntheticSamples = syntheticSamples.load(ordering: .relaxed)
         result.sourceCallbacks = sourceCallbacks.load(ordering: .relaxed)
         result.renderedSamples = renderedSamples
+        result.capturedSamples = capturedSamples
         result.processedFrames = processedFrames.load(ordering: .acquiring)
         result.spectrumFrames = spectrumFrames.load(ordering: .relaxed)
         result.validPhaseFrames = validPhaseFrames.load(ordering: .relaxed)

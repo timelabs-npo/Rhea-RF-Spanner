@@ -37,7 +37,7 @@ final class ObservatoryRendererTests: XCTestCase {
             qualityScore: 1, epoch: 1, source: .simulated, validity: .valid
         )
         renderer.update(
-            view: view, slice: slice, spectrum: current, history: history,
+            view: view, slice: slice, spectrum: current ?? history.last, history: history,
             display: DisplayParameters(spectrumBand: band), presentation: .waterfall,
             active: true, reduceMotion: true
         )
